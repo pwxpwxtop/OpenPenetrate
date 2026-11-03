@@ -1,0 +1,28 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:dev": "vue-tsc && vite build --minify false --mode development",
+    "build": "vue-tsc && vite build --mode production",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@primeuix/themes": "^2.0.3",
+    "@wailsio/runtime": "latest",
+    "pinia": "^4.1.0",
+    "primeicons": "^8.0.2",
+    "primevue": "^4.5.5",
+    "vue": "^3.2.45",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.5",
+    "vue-tsc": "^3.3.12"
+  }
+}

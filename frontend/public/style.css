@@ -1,0 +1,216 @@
+@font-face {
+  font-family: "Inter";
+  src: url("/Inter-Medium.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0b0e17;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel-strong: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #e9edf7;
+  --muted: #8d97ad;
+  --accent: #4f8cff;
+  --accent-2: #8b5cf6;
+  --accent-soft: rgba(79, 140, 255, 0.18);
+  --accent-border: rgba(79, 140, 255, 0.36);
+  --sidebar-bg: rgba(8, 11, 19, 0.58);
+  --app-background: radial-gradient(900px 520px at 88% -12%, rgba(79, 140, 255, 0.15), transparent 62%),
+    radial-gradient(760px 460px at -8% 108%, rgba(139, 92, 246, 0.12), transparent 60%), #0b0e17;
+  --success: #38d39f;
+  --danger: #ff5c72;
+  --radius: 14px;
+  color-scheme: dark;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--app-background, #0b0e17);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+a {
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+  background-clip: content-box;
+}
+
+/* ---------- 页面通用结构 ---------- */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.page-head h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.panel {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+/* ---------- 表单 ---------- */
+.form-grid {
+  display: grid;
+  gap: 15px;
+  padding: 4px 0 2px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field > label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--muted);
+}
+
+.field .hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(141, 151, 173, 0.75);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 52px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state i {
+  font-size: 26px;
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.empty-state strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-state span {
+  font-size: 12.5px;
+}
+
+/* ---------- PrimeVue 表格微调 ---------- */
+.panel .p-datatable-table-container {
+  background: transparent;
+}
+
+.panel .p-datatable-header-cell {
+  background: var(--panel-strong) !important;
+  color: var(--muted) !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.panel .p-datatable-tbody > tr {
+  background: transparent !important;
+}
+
+.panel .p-datatable-tbody > tr:hover {
+  background: var(--panel-strong) !important;
+}
+
+.panel .p-datatable-tbody > tr > td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-color: var(--border) !important;
+}
