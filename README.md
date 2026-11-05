@@ -124,4 +124,6 @@ OpenPenetrate/
 
 ## 许可证
 
-本项目基于 [frp](https://github.com/fatedier/frp) 实现核心穿透能力，遵循其原始许可证；其余代码许可证待定。
+本项目采用 [Apache-2.0](./LICENSE) 许可证，作者 [puweixiang](https://github.com/pwxpwxtop)。
+
+核心穿透能力基于 [frp](https://github.com/fatedier/frp)（Apache-2.0）实现，内嵌其官方发行包并遵循原许可证。
