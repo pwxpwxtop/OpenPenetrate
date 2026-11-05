@@ -35,6 +35,10 @@ const themeDialogVisible = ref(false)
           <i class="fa-solid fa-server"></i>
           <span>服务器挂载</span>
         </RouterLink>
+        <RouterLink to="/promotion" class="nav-item">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>服务器推广</span>
+        </RouterLink>
       </nav>
 
       <button type="button" class="theme-trigger" @click="themeDialogVisible = true">
