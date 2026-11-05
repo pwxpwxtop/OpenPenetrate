@@ -162,7 +162,7 @@ tasks:
 
   run:
     cmds:
-      - '{{.BIN_DIR}}/{{.APP_NAME}}.exe'
+      - '"{{.BIN_DIR}}/{{.APP_NAME}}.exe"'
 
   sign:
     summary: Signs the Windows executable

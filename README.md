@@ -22,6 +22,9 @@ OpenPenetrate（IntranetPenetration）是一款基于 [Wails3](https://v3.wails.
 
 ## 快速开始
 
+## 下载地址
+#### https://github.com/pwxpwxtop/OpenPenetrate/releases/tag/OpenPenetrate
+
 ### 环境要求
 
 - Go 1.24+
@@ -79,11 +82,9 @@ OpenPenetrate/
 
 ### 国内视频（哔哩哔哩）
 
-| 教程 | 链接 | 说明 |
-| ---- | ---- | ---- |
-| 快速上手：10 分钟完成第一次内网穿透 | 【待补充视频链接】 | 安装、部署 frps、添加第一条隧道 |
-| 穿透服务器一键部署详解 | 【待补充视频链接】 | SSH 远程安装 frps 与常见问题排查 |
-| 多设备节点管理实战 | 【待补充视频链接】 | 客户端节点部署与批量管理 |
+| 教程 | 链接                                          | 说明 |
+| ---- |---------------------------------------------| ---- |
+| 穿透服务器一键部署详解 |https://www.bilibili.com/video/BV1de4861Eh9/ | SSH 远程安装 frps 与常见问题排查 |
 
 <!-- 
 在此填入哔哩哔哩视频链接，格式示例：
@@ -92,13 +93,18 @@ OpenPenetrate/
 <iframe src="//player.bilibili.com/player.html?bvid=BVxxxxxx&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
 -->
 
-### 国外视频（YouTube）
+[//]: # (### 国外视频（YouTube）)
 
-| Tutorial | Link | Description |
-| -------- | ---- | ----------- |
-| Getting Started | 【TODO: video link】 | Setup & first tunnel in 10 minutes |
-| Deploying frps Server | 【TODO: video link】 | One-click remote frps installation |
-| Managing Client Nodes | 【TODO: video link】 | Multi-device node deployment |
+[//]: # ()
+[//]: # (| Tutorial | Link | Description |)
+
+[//]: # (| -------- | ---- | ----------- |)
+
+[//]: # (| Getting Started | 【TODO: video link】 | Setup & first tunnel in 10 minutes |)
+
+[//]: # (| Deploying frps Server | 【TODO: video link】 | One-click remote frps installation |)
+
+[//]: # (| Managing Client Nodes | 【TODO: video link】 | Multi-device node deployment |)
 
 <!-- 
 在此填入 YouTube 视频链接（视频由项目维护者提供），格式示例：

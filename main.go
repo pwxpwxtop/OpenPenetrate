@@ -41,8 +41,8 @@ func main() {
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
 	app := application.New(application.Options{
-		Name:        "IntranetPenetration",
-		Description: "内网穿透管理工具",
+		Name:        "OpenPenetrate 1.0.0",
+		Description: "内网穿透可视化管理工具",
 		Services: []application.Service{
 			application.NewService(NewProxyService()),
 		},
@@ -60,7 +60,7 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "内网穿透",
+		Title: "OpenPenetrate 1.0.0",
 		// Window sized to the golden ratio (1000 / 618 ≈ 1.618).
 		Width:  1000,
 		Height: 618,

@@ -2,7 +2,7 @@
   <section class="page">
     <header class="page-head">
       <div>
-        <h1>{{ lang.toOr('promotion.pageTitle', '服务器推广') }}</h1>
+        <h1>{{ lang.toOr('promotion.pageTitle', '服务器推荐') }}</h1>
         <p>{{ lang.toOr('promotion.pageSubtitle', '选购一台有公网 IP 的云服务器即可部署 frps 服务端，点击卡片跳转到对应官网。') }}</p>
       </div>
     </header>

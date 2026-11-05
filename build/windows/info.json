@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "0.1.0"
+		"file_version": "1.0.0"
 	},
 	"info": {
-		"0409": {
-			"ProductVersion": "0.1.0",
-			"CompanyName": "My Company",
-			"FileDescription": "A IntranetPenetration application",
-			"LegalCopyright": "© 2026, My Company",
-			"ProductName": "My Product",
-			"Comments": "This is a comment"
+		"0000": {
+			"ProductVersion": "1.0.0",
+			"CompanyName": "puweixiang",
+			"FileDescription": "内网穿透可视化管理工具",
+			"LegalCopyright": "(c) 2026, puweixiang",
+			"ProductName": "OpenPenetrate",
+			"Comments": "OpenPenetrate - 内网穿透可视化管理工具"
 		}
 	}
 }

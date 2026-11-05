@@ -40,7 +40,7 @@ const themeDialogVisible = ref(false)
         </RouterLink>
         <RouterLink to="/promotion" class="nav-item">
           <i class="fa-solid fa-bullhorn"></i>
-          <span>{{ lang.toOr('menu.promotion', '服务器推广') }}</span>
+          <span>{{ lang.toOr('menu.promotion', '服务器推荐') }}</span>
         </RouterLink>
       </nav>
 
