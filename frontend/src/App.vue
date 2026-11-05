@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Toast from 'primevue/toast'
+import Select from 'primevue/select'
 import ThemeDialog from './components/ThemeDialog.vue'
 import { useThemeStore } from './stores/theme'
+import { useLanguageStore } from './stores/language'
 
 const theme = useThemeStore()
+const lang = useLanguageStore()
 const themeDialogVisible = ref(false)
 </script>
 
@@ -16,35 +19,48 @@ const themeDialogVisible = ref(false)
           <i class="fa-solid fa-tower-broadcast"></i>
         </div>
         <div class="brand-text">
-          <span class="brand-name">内网穿透</span>
+          <span class="brand-name">{{ lang.toOr('brand.name', '内网穿透') }}</span>
           <span class="brand-sub">Intranet Tunnel</span>
         </div>
       </div>
 
-      <div class="nav-label">功能菜单</div>
+      <div class="nav-label">{{ lang.toOr('menu.navLabel', '功能菜单') }}</div>
       <nav class="nav">
         <RouterLink to="/local-proxies" class="nav-item">
           <i class="fa-solid fa-hard-drive"></i>
-          <span>配置本地代理</span>
+          <span>{{ lang.toOr('menu.localProxies', '配置本地代理') }}</span>
         </RouterLink>
         <RouterLink to="/proxy-servers" class="nav-item">
           <i class="fa-solid fa-cloud"></i>
-          <span>代理服务器</span>
+          <span>{{ lang.toOr('menu.proxyServers', '代理服务器') }}</span>
         </RouterLink>
         <RouterLink to="/client-nodes" class="nav-item">
           <i class="fa-solid fa-server"></i>
-          <span>服务器挂载</span>
+          <span>{{ lang.toOr('menu.clientNodes', '服务器挂载') }}</span>
         </RouterLink>
         <RouterLink to="/promotion" class="nav-item">
           <i class="fa-solid fa-bullhorn"></i>
-          <span>服务器推广</span>
+          <span>{{ lang.toOr('menu.promotion', '服务器推广') }}</span>
         </RouterLink>
       </nav>
+
+      <div class="lang-row">
+        <i class="fa-solid fa-globe"></i>
+        <Select
+          v-model="lang.locale"
+          class="lang-select"
+          :options="lang.languages"
+          option-label="label"
+          option-value="code"
+          :aria-label="lang.toOr('menu.languageLabel', '语言')"
+          @update:model-value="lang.setLocale($event)"
+        />
+      </div>
 
       <button type="button" class="theme-trigger" @click="themeDialogVisible = true">
         <i class="fa-solid fa-palette"></i>
         <span class="theme-trigger-text">
-          <span class="theme-trigger-title">主题风格</span>
+          <span class="theme-trigger-title">{{ lang.toOr('menu.themeTitle', '主题风格') }}</span>
           <span class="theme-trigger-name">{{ theme.current.name }}</span>
         </span>
         <i class="fa-solid fa-chevron-right theme-trigger-arrow"></i>
@@ -54,7 +70,7 @@ const themeDialogVisible = ref(false)
         <i class="fa-solid fa-shield-halved"></i>
         <div>
           <span class="footer-title">frp + SSH</span>
-          <span class="footer-desc">自动部署公网服务端</span>
+          <span class="footer-desc">{{ lang.toOr('menu.footerDesc', '自动部署公网服务端') }}</span>
         </div>
       </div>
     </aside>
@@ -170,11 +186,53 @@ const themeDialogVisible = ref(false)
   background: linear-gradient(135deg, var(--accent-soft), transparent);
 }
 
-.theme-trigger {
+.lang-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: auto;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.lang-row:hover {
+  border-color: var(--accent-border);
+  background: var(--panel-strong);
+}
+
+.lang-row > i {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.lang-select {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.lang-select:hover {
+  background: transparent;
+  border: none;
+}
+
+.lang-select:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.theme-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
   padding: 11px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;

@@ -64,6 +64,8 @@ func main() {
 		// Window sized to the golden ratio (1000 / 618 ≈ 1.618).
 		Width:  1000,
 		Height: 618,
+		// 启动时默认最大化窗口。
+		StartState: application.WindowStateMaximised,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,

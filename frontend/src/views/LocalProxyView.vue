@@ -27,6 +27,7 @@ import type {
 import TrafficDialog from '../components/TrafficDialog.vue'
 import SpeedCell from '../components/SpeedCell.vue'
 import { useProxyStore } from '../stores/proxy'
+import { useLanguageStore } from '../stores/language'
 
 type TagSeverity = 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast'
 
@@ -54,13 +55,14 @@ interface MountForm {
   privateKey: string
 }
 
-const authOptions = [
-  { label: '密码', value: 'password' },
-  { label: '私钥', value: 'key' },
-]
+const authOptions = computed(() => [
+  { label: lang.toOr('localProxy.authPassword', '密码'), value: 'password' },
+  { label: lang.toOr('localProxy.authKey', '私钥'), value: 'key' },
+])
 
 const store = useProxyStore()
 const toast = useToast()
+const lang = useLanguageStore()
 const router = useRouter()
 const clientNodes = ref<ClientNode[]>([])
 
@@ -154,7 +156,7 @@ interface TableProxyRow extends LocalProxy {
 const filterServerId = ref('')
 
 const serverFilterOptions = computed(() => [
-  { label: '全部服务器', value: '' },
+  { label: lang.toOr('localProxy.filterAllServers', '全部服务器'), value: '' },
   ...store.servers.map((server) => ({
     label: `${server.name}（${server.host}）`,
     value: server.id,
@@ -182,9 +184,13 @@ const tableRows = computed<TableProxyRow[]>(() => {
         serverId: item.server.id,
         nodeId: config.nodeId,
         status: online ? 'ok' : 'failed',
-        message: `服务器缓存的穿透配置${config.owner ? ' · ' + config.owner : ''}`,
+        message:
+          lang.toOr('localProxy.cachedConfig', '服务器缓存的穿透配置') +
+          (config.owner ? ' · ' + config.owner : ''),
         remoteStatus: online ? 'ok' : 'failed',
-        remoteMessage: online ? '远程端口正在监听' : '远程端口未监听',
+        remoteMessage: online
+          ? lang.toOr('localProxy.remotePortListening', '远程端口正在监听')
+          : lang.toOr('localProxy.remotePortNotListening', '远程端口未监听'),
         remoteOnly: true,
       })
     }
@@ -346,19 +352,19 @@ function openEdit(row: LocalProxy) {
 
 async function save() {
   if (!form.name.trim()) {
-    notifyWarn('请输入名称')
+    notifyWarn(lang.toOr('localProxy.nameRequired', '请输入名称'))
     return
   }
   if (!form.host.trim()) {
-    notifyWarn('请输入本地 IP 或域名')
+    notifyWarn(lang.toOr('localProxy.hostRequired', '请输入本地 IP 或域名'))
     return
   }
   if (!form.port || form.port < 1 || form.port > 65535) {
-    notifyWarn('端口需在 1-65535 之间')
+    notifyWarn(lang.toOr('localProxy.portRange', '端口需在 1-65535 之间'))
     return
   }
   if (!form.remotePort || form.remotePort < 1 || form.remotePort > 65535) {
-    notifyWarn('远程访问端口需在 1-65535 之间')
+    notifyWarn(lang.toOr('localProxy.remotePortRange', '远程访问端口需在 1-65535 之间'))
     return
   }
 
@@ -380,35 +386,49 @@ async function save() {
     if (form.nodeId) {
       toast.add({
         severity: 'warn',
-        summary: '保存成功，需重新部署',
-        detail: '已关联客户端节点，请到「客户端节点」点击部署，新配置才会生效',
+        summary: lang.toOr('localProxy.saveNeedRedeploy', '保存成功，需重新部署'),
+        detail: lang.toOr(
+          'localProxy.redeployDetail',
+          '已关联客户端节点，请到「客户端节点」点击部署，新配置才会生效',
+        ),
         life: 5000,
       })
     } else {
       toast.add({
         severity: 'success',
-        summary: '保存成功',
-        detail: editing.value ? '本地代理配置已更新' : '本地代理已添加',
+        summary: lang.toOr('localProxy.saveSuccess', '保存成功'),
+        detail: editing.value
+          ? lang.toOr('localProxy.updateDetail', '本地代理配置已更新')
+          : lang.toOr('localProxy.addDetail', '本地代理已添加'),
         life: 2600,
       })
     }
     dialogVisible.value = false
   } catch (err) {
-    notifyError('保存失败', err)
+    notifyError(lang.toOr('localProxy.saveFailed', '保存失败'), err)
   } finally {
     saving.value = false
   }
 }
 
 async function remove(row: LocalProxy) {
-  if (!window.confirm(`确定删除「${row.name}」吗？`)) {
+  if (
+    !window.confirm(
+      `${lang.toOr('localProxy.confirmDeletePrefix', '确定删除「')}${row.name}${lang.toOr('localProxy.confirmDeleteSuffix', '」吗？')}`,
+    )
+  ) {
     return
   }
   try {
     await store.deleteLocalProxy(row.id)
-    toast.add({ severity: 'success', summary: '已删除', detail: `「${row.name}」已移除`, life: 2400 })
+    toast.add({
+      severity: 'success',
+      summary: lang.toOr('localProxy.deleted', '已删除'),
+      detail: `${lang.toOr('localProxy.removedPrefix', '「')}${row.name}${lang.toOr('localProxy.removedSuffix', '」已移除')}`,
+      life: 2400,
+    })
   } catch (err) {
-    notifyError('删除失败', err)
+    notifyError(lang.toOr('localProxy.deleteFailed', '删除失败'), err)
   }
 }
 
@@ -417,12 +437,12 @@ async function check(row: LocalProxy) {
   try {
     const checked = await store.checkLocalProxy(row)
     if (checked.status === 'ok') {
-      toast.add({ severity: 'success', summary: '检测成功', detail: checked.message, life: 3200 })
+      toast.add({ severity: 'success', summary: lang.toOr('localProxy.checkSuccess', '检测成功'), detail: checked.message, life: 3200 })
     } else {
-      toast.add({ severity: 'error', summary: '检测失败', detail: checked.message, life: 5200 })
+      toast.add({ severity: 'error', summary: lang.toOr('localProxy.checkFailed', '检测失败'), detail: checked.message, life: 5200 })
     }
   } catch (err) {
-    notifyError('检测失败', err)
+    notifyError(lang.toOr('localProxy.checkFailed', '检测失败'), err)
   } finally {
     checkingId.value = ''
   }
@@ -430,19 +450,19 @@ async function check(row: LocalProxy) {
 
 async function checkRemote(row: LocalProxy) {
   if (!row.serverId) {
-    notifyWarn('请先编辑该代理并选择关联的代理服务器')
+    notifyWarn(lang.toOr('localProxy.selectServerFirst', '请先编辑该代理并选择关联的代理服务器'))
     return
   }
   checkingRemoteId.value = row.id
   try {
     const checked = await store.checkRemoteProxy(row)
     if (checked.remoteStatus === 'ok') {
-      toast.add({ severity: 'success', summary: '远程端口可连接', detail: checked.remoteMessage, life: 3200 })
+      toast.add({ severity: 'success', summary: lang.toOr('localProxy.remoteReachable', '远程端口可连接'), detail: checked.remoteMessage, life: 3200 })
     } else {
-      toast.add({ severity: 'error', summary: '远程端口不可连接', detail: checked.remoteMessage, life: 5200 })
+      toast.add({ severity: 'error', summary: lang.toOr('localProxy.remoteUnreachable', '远程端口不可连接'), detail: checked.remoteMessage, life: 5200 })
     }
   } catch (err) {
-    notifyError('远程检测失败', err)
+    notifyError(lang.toOr('localProxy.remoteCheckFailed', '远程检测失败'), err)
   } finally {
     checkingRemoteId.value = ''
   }
@@ -450,9 +470,11 @@ async function checkRemote(row: LocalProxy) {
 
 function statusLabel(row: LocalProxy) {
   if (row.status === 'ok') {
-    return '正常'
+    return lang.toOr('localProxy.statusOk', '正常')
   }
-  return row.status === 'failed' ? '异常' : '未检测'
+  return row.status === 'failed'
+    ? lang.toOr('localProxy.statusFailed', '异常')
+    : lang.toOr('localProxy.notChecked', '未检测')
 }
 
 function statusSeverity(row: LocalProxy): TagSeverity {
@@ -464,9 +486,11 @@ function statusSeverity(row: LocalProxy): TagSeverity {
 
 function remoteStatusLabel(row: LocalProxy) {
   if (row.remoteStatus === 'ok') {
-    return '可连接'
+    return lang.toOr('localProxy.remoteOk', '可连接')
   }
-  return row.remoteStatus === 'failed' ? '不可连接' : '未检测'
+  return row.remoteStatus === 'failed'
+    ? lang.toOr('localProxy.remoteFail', '不可连接')
+    : lang.toOr('localProxy.notChecked', '未检测')
 }
 
 function remoteStatusSeverity(row: LocalProxy): TagSeverity {
@@ -478,9 +502,9 @@ function remoteStatusSeverity(row: LocalProxy): TagSeverity {
 
 function serverName(id: string) {
   if (!id) {
-    return '未关联'
+    return lang.toOr('localProxy.notLinked', '未关联')
   }
-  return store.servers.find((server) => server.id === id)?.name ?? '已删除'
+  return store.servers.find((server) => server.id === id)?.name ?? lang.toOr('localProxy.deleted', '已删除')
 }
 
 function serverHost(id: string) {
@@ -496,7 +520,7 @@ function nodeName(id: string) {
   if (!id) {
     return ''
   }
-  return clientNodes.value.find((node) => node.id === id)?.name ?? '已删除'
+  return clientNodes.value.find((node) => node.id === id)?.name ?? lang.toOr('localProxy.deleted', '已删除')
 }
 
 function nodeFor(row: LocalProxy) {
@@ -512,7 +536,9 @@ function isNodeManaged(row: LocalProxy) {
 
 function tunnelLabel(row: LocalProxy) {
   if (isNodeManaged(row)) {
-    return nodeFor(row)?.status === 'active' ? '节点运行中' : '节点托管'
+    return nodeFor(row)?.status === 'active'
+      ? lang.toOr('localProxy.nodeRunning', '节点运行中')
+      : lang.toOr('localProxy.nodeManaged', '节点托管')
   }
   return frpcLabel(row)
 }
@@ -535,7 +561,7 @@ function onTunnelTag(row: LocalProxy) {
 async function openRemote(row: LocalProxy) {
   const host = serverHost(row.serverId)
   if (!host) {
-    notifyWarn('请先编辑该代理并选择关联的代理服务器')
+    notifyWarn(lang.toOr('localProxy.selectServerFirst', '请先编辑该代理并选择关联的代理服务器'))
     return
   }
   const formattedHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
@@ -561,11 +587,11 @@ async function copyRemotePort(row: LocalProxy) {
     document.execCommand('copy')
     document.body.removeChild(textarea)
   }
-  toast.add({ severity: 'success', summary: '已复制', detail: text, life: 2000 })
+  toast.add({ severity: 'success', summary: lang.toOr('localProxy.copied', '已复制'), detail: text, life: 2000 })
 }
 
 function openTraffic(row: LocalProxy) {
-  trafficTitle.value = `流量监控 · ${row.name}`
+  trafficTitle.value = `${lang.toOr('localProxy.trafficTitle', '流量监控')} · ${row.name}`
   trafficFetcher.value = () => ProxyService.GetLocalProxyTraffic(row.id)
   trafficVisible.value = true
 }
@@ -612,7 +638,7 @@ function openMount(row: LocalProxy) {
   const localNode = clientNodes.value.find((node) => node.authType === 'local')
   mountNodeId.value = mountLocal.value && localNode ? localNode.id : ''
   Object.assign(mountForm, {
-    name: `${row.name} 节点`,
+    name: `${row.name} ${lang.toOr('localProxy.nodeWord', '节点')}`,
     host: row.host,
     sshPort: 22,
     username: 'root',
@@ -629,7 +655,9 @@ function mountPayload(): ClientNode {
   const local = mountLocal.value
   return {
     id: '',
-    name: mountForm.name.trim() || (row ? `${row.name} 节点` : '客户端节点'),
+    name:
+      mountForm.name.trim() ||
+      (row ? `${row.name} ${lang.toOr('localProxy.nodeWord', '节点')}` : lang.toOr('localProxy.clientNode', '客户端节点')),
     host: local ? '127.0.0.1' : mountForm.host.trim(),
     sshPort: local ? 22 : (mountForm.sshPort ?? 22),
     username: local ? 'local' : mountForm.username.trim(),
@@ -667,28 +695,28 @@ async function confirmMount() {
     ? clientNodes.value.find((node) => node.id === mountNodeId.value)
     : undefined
   if (mountNodeId.value && !selected) {
-    notifyWarn('所选节点不存在，请重新选择')
+    notifyWarn(lang.toOr('localProxy.nodeNotFound', '所选节点不存在，请重新选择'))
     return
   }
   if (!selected && !mountLocal.value) {
     if (!mountForm.host.trim()) {
-      notifyWarn('请输入远程机器地址')
+      notifyWarn(lang.toOr('localProxy.remoteHostRequired', '请输入远程机器地址'))
       return
     }
     if (!mountForm.username.trim()) {
-      notifyWarn('请输入 SSH 用户名')
+      notifyWarn(lang.toOr('localProxy.sshUserRequired', '请输入 SSH 用户名'))
       return
     }
     if (!mountForm.sshPort || mountForm.sshPort < 1 || mountForm.sshPort > 65535) {
-      notifyWarn('SSH 端口需在 1-65535 之间')
+      notifyWarn(lang.toOr('localProxy.sshPortRange', 'SSH 端口需在 1-65535 之间'))
       return
     }
     if (mountForm.authType === 'password' && !mountForm.password) {
-      notifyWarn('请输入 SSH 密码')
+      notifyWarn(lang.toOr('localProxy.sshPasswordRequired', '请输入 SSH 密码'))
       return
     }
     if (mountForm.authType === 'key' && !mountForm.privateKey.trim()) {
-      notifyWarn('请粘贴 SSH 私钥')
+      notifyWarn(lang.toOr('localProxy.sshKeyRequired', '请粘贴 SSH 私钥'))
       return
     }
   }
@@ -740,16 +768,16 @@ async function confirmMount() {
 
     toast.add({
       severity: 'success',
-      summary: '挂载完成',
+      summary: lang.toOr('localProxy.mountDone', '挂载完成'),
       detail: deployed.configured
-        ? `${deployed.name} 上的 frpc 已启动`
-        : 'frpc 已安装，等待关联本地代理',
+        ? `${deployed.name} ${lang.toOr('localProxy.frpcStartedOn', '上的 frpc 已启动')}`
+        : lang.toOr('localProxy.frpcInstalledWait', 'frpc 已安装，等待关联本地代理'),
       life: 4000,
     })
   } catch (err) {
     mountFailed.value = true
-    mountLogs.value.push('挂载失败: ' + errorText(err))
-    toast.add({ severity: 'error', summary: '挂载失败', detail: errorText(err), life: 6000 })
+    mountLogs.value.push(lang.toOr('localProxy.mountFailedLog', '挂载失败: ') + errorText(err))
+    toast.add({ severity: 'error', summary: lang.toOr('localProxy.mountFailed', '挂载失败'), detail: errorText(err), life: 6000 })
   } finally {
     mounting.value = false
   }
@@ -760,7 +788,7 @@ function isFrpcRunning(row: LocalProxy) {
 }
 
 function frpcLabel(row: LocalProxy) {
-  return isFrpcRunning(row) ? '运行中' : '未运行'
+  return isFrpcRunning(row) ? lang.toOr('localProxy.running', '运行中') : lang.toOr('localProxy.notRunning', '未运行')
 }
 
 function frpcSeverity(row: LocalProxy): TagSeverity {
@@ -780,7 +808,7 @@ async function openTunnelLogs(row: LocalProxy) {
 
 async function startTunnel(row: LocalProxy) {
   if (!row.serverId) {
-    notifyWarn('请先编辑该代理并选择关联的代理服务器')
+    notifyWarn(lang.toOr('localProxy.selectServerFirst', '请先编辑该代理并选择关联的代理服务器'))
     return
   }
   tunnelProxyId.value = row.id
@@ -791,10 +819,15 @@ async function startTunnel(row: LocalProxy) {
   try {
     const status = await ProxyService.StartFrpc(row.id)
     frpcStatuses.value[row.id] = status
-    toast.add({ severity: 'success', summary: '穿透已启动', detail: `${row.name} 的 frpc 已运行`, life: 3000 })
+    toast.add({
+      severity: 'success',
+      summary: lang.toOr('localProxy.tunnelStarted', '穿透已启动'),
+      detail: `${row.name}${lang.toOr('localProxy.frpcRunningSuffix', ' 的 frpc 已运行')}`,
+      life: 3000,
+    })
   } catch (err) {
-    tunnelLogs.value.push('启动失败: ' + errorText(err))
-    toast.add({ severity: 'error', summary: '启动失败', detail: errorText(err), life: 6000 })
+    tunnelLogs.value.push(lang.toOr('localProxy.startFailedLog', '启动失败: ') + errorText(err))
+    toast.add({ severity: 'error', summary: lang.toOr('localProxy.startFailed', '启动失败'), detail: errorText(err), life: 6000 })
   } finally {
     startingId.value = ''
   }
@@ -805,9 +838,9 @@ async function stopTunnel(row: LocalProxy) {
   try {
     const status = await ProxyService.StopFrpc(row.id)
     frpcStatuses.value[row.id] = status
-    toast.add({ severity: 'success', summary: '穿透已停止', detail: row.name, life: 2600 })
+    toast.add({ severity: 'success', summary: lang.toOr('localProxy.tunnelStopped', '穿透已停止'), detail: row.name, life: 2600 })
   } catch (err) {
-    notifyError('停止失败', err)
+    notifyError(lang.toOr('localProxy.stopFailed', '停止失败'), err)
   } finally {
     stoppingId.value = ''
   }
@@ -818,7 +851,7 @@ function errorText(err: unknown) {
 }
 
 function notifyWarn(detail: string) {
-  toast.add({ severity: 'warn', summary: '请检查输入', detail, life: 2600 })
+  toast.add({ severity: 'warn', summary: lang.toOr('localProxy.checkInput', '请检查输入'), detail, life: 2600 })
 }
 
 function notifyError(summary: string, err: unknown) {
@@ -830,8 +863,8 @@ function notifyError(summary: string, err: unknown) {
   <section class="page">
     <header class="page-head">
       <div>
-        <h1>配置本地代理</h1>
-        <p>记录需要暴露到公网的内网服务，填写设备地址与端口即可。</p>
+        <h1>{{ lang.toOr('localProxy.pageTitle', '配置本地代理') }}</h1>
+        <p>{{ lang.toOr('localProxy.pageSubtitle', '记录需要暴露到公网的内网服务，填写设备地址与端口即可。') }}</p>
       </div>
       <div class="head-actions">
         <Select
@@ -843,14 +876,14 @@ function notifyError(summary: string, err: unknown) {
         />
         <span v-if="detecting" class="detect-hint">
           <i class="fa-solid fa-rotate fa-spin"></i>
-          正在检测状态
+          {{ lang.toOr('localProxy.detecting', '正在检测状态') }}
         </span>
-        <Button text rounded severity="secondary" title="重新检测状态" :loading="detecting" @click="autoDetectStatuses">
+        <Button text rounded severity="secondary" :title="lang.toOr('localProxy.recheckTitle', '重新检测状态')" :loading="detecting" @click="autoDetectStatuses">
           <i v-if="!detecting" class="fa-solid fa-rotate"></i>
         </Button>
         <Button @click="openCreate">
           <i class="fa-solid fa-plus"></i>
-          <span class="btn-label">添加本地代理</span>
+          <span class="btn-label">{{ lang.toOr('localProxy.addProxy', '添加本地代理') }}</span>
         </Button>
       </div>
     </header>
@@ -862,27 +895,27 @@ function notifyError(summary: string, err: unknown) {
         dataKey="id"
         tableStyle="width: 100%; table-layout: fixed"
       >
-        <Column header="名称" style="width: 11%">
+        <Column :header="lang.toOr('localProxy.name', '名称')" style="width: 11%">
           <template #body="{ data }">
             <div class="proxy-name">
               <span class="proxy-dot" :class="{ remote: data.remoteOnly }"></span>
               <span class="proxy-name-text">{{ data.name }}</span>
-              <span v-if="data.remoteOnly" class="remote-badge">远程</span>
+              <span v-if="data.remoteOnly" class="remote-badge">{{ lang.toOr('localProxy.remote', '远程') }}</span>
             </div>
           </template>
         </Column>
-        <Column header="本地服务" style="width: 20%">
+        <Column :header="lang.toOr('localProxy.colLocalService', '本地服务')" style="width: 20%">
           <template #body="{ data }">
             <span class="mono local-service">{{ data.host }}:{{ data.port }}</span>
           </template>
         </Column>
-        <Column header="远程端口" style="width: 15%">
+        <Column :header="lang.toOr('localProxy.colRemotePort', '远程端口')" style="width: 15%">
           <template #body="{ data }">
             <div class="remote-cell">
               <button
                 class="remote-link"
                 type="button"
-                :title="data.serverId ? `在浏览器打开 http://${serverHost(data.serverId)}:${data.remotePort}` : '请先关联代理服务器'"
+                :title="data.serverId ? `${lang.toOr('localProxy.openInBrowser', '在浏览器打开')} http://${serverHost(data.serverId)}:${data.remotePort}` : lang.toOr('localProxy.linkServerFirst', '请先关联代理服务器')"
                 @click="openRemote(data)"
               >
                 <span class="port-pill remote">{{ data.remotePort }}</span>
@@ -894,50 +927,50 @@ function notifyError(summary: string, err: unknown) {
             </div>
           </template>
         </Column>
-        <Column header="状态" style="width: 15%">
+        <Column :header="lang.toOr('localProxy.colStatus', '状态')" style="width: 15%">
           <template #body="{ data }">
             <div class="status-stack">
               <template v-if="data.remoteOnly">
                 <Tag
-                  :value="data.remoteStatus === 'ok' ? '已监听' : '未监听'"
+                  :value="data.remoteStatus === 'ok' ? lang.toOr('localProxy.listening', '已监听') : lang.toOr('localProxy.notListening', '未监听')"
                   :severity="data.remoteStatus === 'ok' ? 'success' : 'warn'"
                   :title="data.remoteMessage"
                 />
               </template>
               <template v-else>
                 <Tag
-                  :value="`本地 ${statusLabel(data)}`"
+                  :value="`${lang.toOr('localProxy.localWord', '本地')} ${statusLabel(data)}`"
                   :severity="statusSeverity(data)"
-                  :title="data.message || '尚未检测本地服务'"
+                  :title="data.message || lang.toOr('localProxy.noLocalCheck', '尚未检测本地服务')"
                 />
                 <Tag
-                  :value="`远程 ${remoteStatusLabel(data)}`"
+                  :value="`${lang.toOr('localProxy.remote', '远程')} ${remoteStatusLabel(data)}`"
                   :severity="remoteStatusSeverity(data)"
-                  :title="data.remoteMessage || '尚未检测远程端口'"
+                  :title="data.remoteMessage || lang.toOr('localProxy.noRemoteCheck', '尚未检测远程端口')"
                 />
-                <button class="tag-button" type="button" title="查看穿透状态" @click="onTunnelTag(data)">
-                  <Tag :value="`穿透 ${tunnelLabel(data)}`" :severity="tunnelSeverity(data)" />
+                <button class="tag-button" type="button" :title="lang.toOr('localProxy.viewTunnel', '查看穿透状态')" @click="onTunnelTag(data)">
+                  <Tag :value="`${lang.toOr('localProxy.tunnelWord', '穿透')} ${tunnelLabel(data)}`" :severity="tunnelSeverity(data)" />
                 </button>
               </template>
             </div>
           </template>
         </Column>
-        <Column header="网速" style="width: 11%">
+        <Column :header="lang.toOr('localProxy.colSpeed', '网速')" style="width: 11%">
           <template #body="{ data }">
             <SpeedCell v-if="!data.remoteOnly" :fetcher="proxySpeedFetcher(data.id)" />
-            <span v-else class="muted" title="服务器缓存的配置，仅本机代理可测速">—</span>
+            <span v-else class="muted" :title="lang.toOr('localProxy.cachedSpeedHint', '服务器缓存的配置，仅本机代理可测速')">—</span>
           </template>
         </Column>
-        <Column header="操作" style="width: 28%">
+        <Column :header="lang.toOr('localProxy.colActions', '操作')" style="width: 28%">
           <template #body="{ data }">
             <div class="row-actions">
               <template v-if="data.remoteOnly">
-                <Button text rounded severity="secondary" title="复制远程端口" @click="copyRemotePort(data)">
+                <Button text rounded severity="secondary" :title="lang.toOr('localProxy.copyPortTitle', '复制远程端口')" @click="copyRemotePort(data)">
                   <i class="fa-regular fa-copy"></i>
                 </Button>
               </template>
               <template v-else>
-              <Button text rounded severity="secondary" title="挂载后台（SSH 安装 frpc 服务）" @click="openMount(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('localProxy.mountBtnTitle', '挂载后台（SSH 安装 frpc 服务）')" @click="openMount(data)">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
               </Button>
               <Button
@@ -945,7 +978,7 @@ function notifyError(summary: string, err: unknown) {
                 text
                 rounded
                 :severity="isFrpcRunning(data) ? 'danger' : 'success'"
-                :title="isFrpcRunning(data) ? '停止穿透' : '启动穿透'"
+                :title="isFrpcRunning(data) ? lang.toOr('localProxy.stopTunnelTitle', '停止穿透') : lang.toOr('localProxy.startTunnelTitle', '启动穿透')"
                 :loading="startingId === data.id || stoppingId === data.id"
                 @click="isFrpcRunning(data) ? stopTunnel(data) : startTunnel(data)"
               >
@@ -954,19 +987,19 @@ function notifyError(summary: string, err: unknown) {
                   :class="isFrpcRunning(data) ? 'fa-solid fa-stop' : 'fa-solid fa-play'"
                 ></i>
               </Button>
-              <Button text rounded severity="secondary" title="检测本地服务" :loading="checkingId === data.id" @click="check(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('localProxy.checkLocalTitle', '检测本地服务')" :loading="checkingId === data.id" @click="check(data)">
                 <i v-if="checkingId !== data.id" class="fa-solid fa-stethoscope"></i>
               </Button>
-              <Button text rounded severity="secondary" title="检测远程端口" :loading="checkingRemoteId === data.id" @click="checkRemote(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('localProxy.checkRemoteTitle', '检测远程端口')" :loading="checkingRemoteId === data.id" @click="checkRemote(data)">
                 <i v-if="checkingRemoteId !== data.id" class="fa-solid fa-satellite-dish"></i>
               </Button>
-              <Button text rounded severity="secondary" title="查看上行 / 下行" @click="openTraffic(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('localProxy.viewTrafficTitle', '查看上行 / 下行')" @click="openTraffic(data)">
                 <i class="fa-solid fa-chart-line"></i>
               </Button>
-              <Button text rounded severity="secondary" title="编辑" @click="openEdit(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('localProxy.edit', '编辑')" @click="openEdit(data)">
                 <i class="fa-solid fa-pen"></i>
               </Button>
-              <Button text rounded severity="danger" title="删除" @click="remove(data)">
+              <Button text rounded severity="danger" :title="lang.toOr('localProxy.delete', '删除')" @click="remove(data)">
                 <i class="fa-solid fa-trash-can"></i>
               </Button>
               </template>
@@ -977,8 +1010,8 @@ function notifyError(summary: string, err: unknown) {
         <template #empty>
           <div class="empty-state">
             <i class="fa-solid fa-server"></i>
-            <strong>还没有本地代理</strong>
-            <span>点击右上角「添加本地代理」开始配置</span>
+            <strong>{{ lang.toOr('localProxy.emptyTitle', '还没有本地代理') }}</strong>
+            <span>{{ lang.toOr('localProxy.emptyHint', '点击右上角「添加本地代理」开始配置') }}</span>
           </div>
         </template>
       </DataTable>
@@ -988,56 +1021,64 @@ function notifyError(summary: string, err: unknown) {
       v-model:visible="dialogVisible"
       modal
       :draggable="false"
-      :header="editing ? '编辑本地代理' : '添加本地代理'"
+      :header="editing ? lang.toOr('localProxy.editProxy', '编辑本地代理') : lang.toOr('localProxy.addProxy', '添加本地代理')"
       :style="{ width: '460px' }"
     >
       <div class="form-grid">
         <div class="field">
-          <label>名称</label>
-          <InputText v-model="form.name" fluid placeholder="例如：NAS 管理后台" maxlength="40" />
+          <label>{{ lang.toOr('localProxy.name', '名称') }}</label>
+          <InputText v-model="form.name" fluid :placeholder="lang.toOr('localProxy.namePlaceholder', '例如：NAS 管理后台')" maxlength="40" />
         </div>
         <div class="field">
-          <label>本地 IP 或域名</label>
-          <InputText v-model="form.host" fluid placeholder="192.168.1.10 或 nas.local" />
-          <span class="hint">填写内网设备地址，支持 IPv4、IPv6 或域名</span>
+          <label>{{ lang.toOr('localProxy.fieldHost', '本地 IP 或域名') }}</label>
+          <InputText v-model="form.host" fluid :placeholder="lang.toOr('localProxy.hostPlaceholder', '192.168.1.10 或 nas.local')" />
+          <span class="hint">{{ lang.toOr('localProxy.hostHint', '填写内网设备地址，支持 IPv4、IPv6 或域名') }}</span>
         </div>
         <div class="field">
-          <label>关联代理服务器</label>
+          <label>{{ lang.toOr('localProxy.fieldServer', '关联代理服务器') }}</label>
           <Select
             v-model="form.serverId"
             fluid
             :options="serverOptions"
             option-label="label"
             option-value="value"
-            placeholder="选择用于穿透的公网服务器"
+            :placeholder="lang.toOr('localProxy.serverPlaceholder', '选择用于穿透的公网服务器')"
             show-clear
           />
           <span class="hint">
-            {{ serverOptions.length ? '远程检测会尝试连接该服务器的远程端口' : '还没有代理服务器，请先到「代理服务器」页面添加' }}
+            {{
+              serverOptions.length
+                ? lang.toOr('localProxy.serverHintOk', '远程检测会尝试连接该服务器的远程端口')
+                : lang.toOr('localProxy.serverHintNone', '还没有代理服务器，请先到「代理服务器」页面添加')
+            }}
           </span>
         </div>
         <div v-show="false" class="field">
-          <label>客户端节点（可选）</label>
+          <label>{{ lang.toOr('localProxy.fieldNodeOpt', '客户端节点（可选）') }}</label>
           <Select
             v-model="form.nodeId"
             fluid
             :options="nodeOptions"
             option-label="label"
             option-value="value"
-            placeholder="选择后台运行 frpc 的 Linux 节点"
+            :placeholder="lang.toOr('localProxy.nodePlaceholder', '选择后台运行 frpc 的 Linux 节点')"
             show-clear
           />
           <span class="hint">
-            {{ nodeOptions.length ? '选择后由该节点后台运行 frpc，桌面端只负责控制' : '还没有客户端节点，请先到「客户端节点」页面添加' }}
+            {{
+              nodeOptions.length
+                ? lang.toOr('localProxy.nodeHintOk', '选择后由该节点后台运行 frpc，桌面端只负责控制')
+                : lang.toOr('localProxy.nodeHintNone', '还没有客户端节点，请先到「客户端节点」页面添加')
+            }}
           </span>
         </div>
         <div class="form-row">
           <div class="field">
-            <label>本地端口</label>
+            <label>{{ lang.toOr('localProxy.fieldLocalPort', '本地端口') }}</label>
             <InputNumber v-model="form.port" fluid :min="1" :max="65535" :use-grouping="false" placeholder="80" />
           </div>
           <div class="field">
-            <label>远程访问端口</label>
+            <label>{{ lang.toOr('localProxy.fieldRemotePort', '远程访问端口') }}</label>
             <InputNumber
               v-model="form.remotePort"
               fluid
@@ -1048,14 +1089,14 @@ function notifyError(summary: string, err: unknown) {
             />
           </div>
         </div>
-        <span class="hint">远程访问端口需在代理服务器的安全组/防火墙中放行</span>
+        <span class="hint">{{ lang.toOr('localProxy.remotePortFirewallHint', '远程访问端口需在代理服务器的安全组/防火墙中放行') }}</span>
       </div>
 
       <template #footer>
-        <Button text severity="secondary" label="取消" @click="dialogVisible = false" />
+        <Button text severity="secondary" :label="lang.toOr('localProxy.cancel', '取消')" @click="dialogVisible = false" />
         <Button :loading="saving" @click="save">
           <i v-if="!saving" class="fa-solid fa-check"></i>
-          <span class="btn-label">保存</span>
+          <span class="btn-label">{{ lang.toOr('localProxy.save', '保存') }}</span>
         </Button>
       </template>
     </Dialog>
@@ -1066,17 +1107,17 @@ function notifyError(summary: string, err: unknown) {
       :draggable="false"
       :closable="startingId === ''"
       :close-on-escape="startingId === ''"
-      :header="`穿透日志 · ${tunnelProxyName}`"
+      :header="`${lang.toOr('localProxy.tunnelLogTitle', '穿透日志')} · ${tunnelProxyName}`"
       :style="{ width: '720px' }"
     >
       <div class="log-status">
-        <Tag v-if="frpcStatuses[tunnelProxyId]?.running" severity="success" value="运行中" />
-        <Tag v-else severity="secondary" value="未运行" />
-        <span class="muted">frpc 输出日志会实时显示在这里</span>
+        <Tag v-if="frpcStatuses[tunnelProxyId]?.running" severity="success" :value="lang.toOr('localProxy.running', '运行中')" />
+        <Tag v-else severity="secondary" :value="lang.toOr('localProxy.notRunning', '未运行')" />
+        <span class="muted">{{ lang.toOr('localProxy.frpcLogHint', 'frpc 输出日志会实时显示在这里') }}</span>
       </div>
-      <pre ref="tunnelLogRef" class="log-view">{{ tunnelLogs.length ? tunnelLogs.join('\n') : '等待 frpc 输出...' }}</pre>
+      <pre ref="tunnelLogRef" class="log-view">{{ tunnelLogs.length ? tunnelLogs.join('\n') : lang.toOr('localProxy.waitingFrpc', '等待 frpc 输出...') }}</pre>
       <template #footer>
-        <Button text severity="secondary" :disabled="startingId !== ''" label="关闭" @click="tunnelVisible = false" />
+        <Button text severity="secondary" :disabled="startingId !== ''" :label="lang.toOr('localProxy.close', '关闭')" @click="tunnelVisible = false" />
       </template>
     </Dialog>
 
@@ -1084,50 +1125,50 @@ function notifyError(summary: string, err: unknown) {
       v-model:visible="mountVisible"
       modal
       :draggable="false"
-      header="挂载后台服务"
+      :header="lang.toOr('localProxy.mountDialogTitle', '挂载后台服务')"
       :style="{ width: '580px' }"
     >
       <div class="form-grid">
         <div class="field">
-          <label>挂载到节点</label>
+          <label>{{ lang.toOr('localProxy.mountToNode', '挂载到节点') }}</label>
           <Select
             v-model="mountNodeId"
             fluid
             :options="clientNodes"
             option-label="name"
             option-value="id"
-            placeholder="新建节点，或选择已有节点"
+            :placeholder="lang.toOr('localProxy.mountNodePlaceholder', '新建节点，或选择已有节点')"
             show-clear
           />
-          <span class="hint">选择已有节点时，新代理会与该节点上已有代理一起部署，不会覆盖其他端口</span>
+          <span class="hint">{{ lang.toOr('localProxy.mountNodeHint', '选择已有节点时，新代理会与该节点上已有代理一起部署，不会覆盖其他端口') }}</span>
         </div>
         <template v-if="!mountNodeId">
           <div class="field">
-            <label>节点名称</label>
-            <InputText v-model="mountForm.name" fluid placeholder="例如：内网服务器" maxlength="40" />
+            <label>{{ lang.toOr('localProxy.fieldNodeName', '节点名称') }}</label>
+            <InputText v-model="mountForm.name" fluid :placeholder="lang.toOr('localProxy.nodeNamePlaceholder', '例如：内网服务器')" maxlength="40" />
           </div>
           <div class="local-toggle">
           <Checkbox v-model="mountLocal" inputId="mountLocal" binary />
-          <label for="mountLocal">本机挂载（无需 SSH，安装为 Windows 后台任务）</label>
+          <label for="mountLocal">{{ lang.toOr('localProxy.localMountLabel', '本机挂载（无需 SSH，安装为 Windows 后台任务）') }}</label>
         </div>
         <template v-if="!mountLocal">
           <div class="form-row">
             <div class="field">
-              <label>远程机器地址</label>
-              <InputText v-model="mountForm.host" fluid placeholder="192.168.1.20 或 server.local" />
+              <label>{{ lang.toOr('localProxy.fieldRemoteHost', '远程机器地址') }}</label>
+              <InputText v-model="mountForm.host" fluid :placeholder="lang.toOr('localProxy.remoteHostPlaceholder', '192.168.1.20 或 server.local')" />
             </div>
             <div class="field">
-              <label>SSH 端口</label>
+              <label>{{ lang.toOr('localProxy.fieldSshPort', 'SSH 端口') }}</label>
               <InputNumber v-model="mountForm.sshPort" fluid :min="1" :max="65535" :use-grouping="false" />
             </div>
           </div>
           <div class="form-row">
             <div class="field">
-              <label>SSH 用户名</label>
+              <label>{{ lang.toOr('localProxy.fieldSshUser', 'SSH 用户名') }}</label>
               <InputText v-model="mountForm.username" fluid placeholder="root" />
             </div>
             <div class="field">
-              <label>认证方式</label>
+              <label>{{ lang.toOr('localProxy.fieldAuthType', '认证方式') }}</label>
               <Select
                 v-model="mountForm.authType"
                 fluid
@@ -1138,11 +1179,11 @@ function notifyError(summary: string, err: unknown) {
             </div>
           </div>
           <div v-if="mountForm.authType === 'password'" class="field">
-            <label>SSH 密码</label>
-            <Password v-model="mountForm.password" fluid :feedback="false" toggle-mask placeholder="输入远程机器密码" />
+            <label>{{ lang.toOr('localProxy.fieldSshPassword', 'SSH 密码') }}</label>
+            <Password v-model="mountForm.password" fluid :feedback="false" toggle-mask :placeholder="lang.toOr('localProxy.sshPasswordPlaceholder', '输入远程机器密码')" />
           </div>
           <div v-else class="field">
-            <label>SSH 私钥</label>
+            <label>{{ lang.toOr('localProxy.fieldSshKey', 'SSH 私钥') }}</label>
             <Textarea
               v-model="mountForm.privateKey"
               fluid
@@ -1150,15 +1191,19 @@ function notifyError(summary: string, err: unknown) {
               class="key-area"
               placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
             />
-            <span class="hint">支持 OpenSSH 私钥（不支持带 passphrase 的私钥）</span>
+            <span class="hint">{{ lang.toOr('localProxy.keyHint', '支持 OpenSSH 私钥（不支持带 passphrase 的私钥）') }}</span>
           </div>
         </template>
         <span v-if="mountLocal" class="hint">
-          将在当前电脑安装 frpc 并创建开机计划任务，无需 SSH。本地服务地址请填写本机可访问的 IP 和端口。
+          {{ lang.toOr('localProxy.localMountHint', '将在当前电脑安装 frpc 并创建开机计划任务，无需 SSH。本地服务地址请填写本机可访问的 IP 和端口。') }}
         </span>
         <span v-else class="hint">
-          支持 Windows / Linux / macOS。确认后自动安装 frpc 后台服务，并在「客户端节点」中显示。
-          本地服务地址请填写「从远程机器视角」可访问的 IP 和端口。
+          {{
+            lang.toOr(
+              'localProxy.remoteMountHint',
+              '支持 Windows / Linux / macOS。确认后自动安装 frpc 后台服务，并在「客户端节点」中显示。 本地服务地址请填写「从远程机器视角」可访问的 IP 和端口。',
+            )
+          }}
         </span>
         </template>
         <div v-if="mountTestResult" class="test-result" :class="{ ok: mountTestOk }">
@@ -1171,14 +1216,14 @@ function notifyError(summary: string, err: unknown) {
         <div class="dialog-footer">
           <Button v-if="!mountNodeId" text severity="secondary" :loading="mountTesting" @click="testMount">
             <i v-if="!mountTesting" class="fa-solid fa-plug"></i>
-            <span class="btn-label">测试连接</span>
+            <span class="btn-label">{{ lang.toOr('localProxy.testConnection', '测试连接') }}</span>
           </Button>
           <span v-else class="muted"></span>
           <div class="footer-actions">
-            <Button text severity="secondary" :disabled="mounting" label="取消" @click="mountVisible = false" />
+            <Button text severity="secondary" :disabled="mounting" :label="lang.toOr('localProxy.cancel', '取消')" @click="mountVisible = false" />
             <Button :loading="mounting" @click="confirmMount">
               <i v-if="!mounting" class="fa-solid fa-cloud-arrow-up"></i>
-              <span class="btn-label">确定并安装</span>
+              <span class="btn-label">{{ lang.toOr('localProxy.confirmInstall', '确定并安装') }}</span>
             </Button>
           </div>
         </div>
@@ -1191,18 +1236,18 @@ function notifyError(summary: string, err: unknown) {
       :draggable="false"
       :closable="!mounting"
       :close-on-escape="!mounting"
-      :header="`挂载后台 · ${mountNodeName}`"
+      :header="`${lang.toOr('localProxy.mountLogTitle', '挂载后台')} · ${mountNodeName}`"
       :style="{ width: '720px' }"
     >
       <div class="log-status">
-        <Tag v-if="mounting" severity="warn" value="安装中" />
-        <Tag v-else-if="mountFailed" severity="danger" value="安装失败" />
-        <Tag v-else severity="success" value="安装完成" />
-        <span class="muted">远程安装输出会实时显示在这里</span>
+        <Tag v-if="mounting" severity="warn" :value="lang.toOr('localProxy.installing', '安装中')" />
+        <Tag v-else-if="mountFailed" severity="danger" :value="lang.toOr('localProxy.installFailed', '安装失败')" />
+        <Tag v-else severity="success" :value="lang.toOr('localProxy.installDone', '安装完成')" />
+        <span class="muted">{{ lang.toOr('localProxy.remoteInstallHint', '远程安装输出会实时显示在这里') }}</span>
       </div>
-      <pre ref="mountLogRef" class="log-view">{{ mountLogs.length ? mountLogs.join('\n') : '等待远程输出...' }}</pre>
+      <pre ref="mountLogRef" class="log-view">{{ mountLogs.length ? mountLogs.join('\n') : lang.toOr('localProxy.waitingRemote', '等待远程输出...') }}</pre>
       <template #footer>
-        <Button text severity="secondary" :disabled="mounting" label="关闭" @click="mountLogVisible = false" />
+        <Button text severity="secondary" :disabled="mounting" :label="lang.toOr('localProxy.close', '关闭')" @click="mountLogVisible = false" />
       </template>
     </Dialog>
 

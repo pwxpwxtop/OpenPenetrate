@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Browser, Events } from '@wailsio/runtime'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
@@ -16,6 +16,7 @@ import { ProxyService } from '../../bindings/changeme'
 import type { ClientNode, LocalProxy, ProxyServer, TrafficStats } from '../../bindings/changeme'
 import TrafficDialog from '../components/TrafficDialog.vue'
 import SpeedCell from '../components/SpeedCell.vue'
+import { useLanguageStore } from '../stores/language'
 
 type TagSeverity = 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast'
 
@@ -35,11 +36,13 @@ interface NodeForm {
   message: string
 }
 
-const authOptions = [
-  { label: '密码', value: 'password' },
-  { label: '私钥', value: 'key' },
-  { label: '本机', value: 'local' },
-]
+const lang = useLanguageStore()
+
+const authOptions = computed(() => [
+  { label: lang.toOr('clientNode.authPassword', '密码'), value: 'password' },
+  { label: lang.toOr('clientNode.authKey', '私钥'), value: 'key' },
+  { label: lang.toOr('clientNode.authLocal', '本机'), value: 'local' },
+])
 
 const toast = useToast()
 const nodes = ref<ClientNode[]>([])
@@ -140,7 +143,7 @@ async function loadNodes() {
   try {
     nodes.value = (await ProxyService.ListNodes()) ?? []
   } catch (err) {
-    notifyError('加载失败', err)
+    notifyError(lang.toOr('clientNode.loadFailed', '加载失败'), err)
   } finally {
     loading.value = false
   }
@@ -194,7 +197,12 @@ function openMountDetail(node: ClientNode) {
 async function openProxyRemote(proxy: LocalProxy) {
   const host = servers.value.find((server) => server.id === proxy.serverId)?.host ?? ''
   if (!host) {
-    toast.add({ severity: 'warn', summary: '无法跳转', detail: '该代理未关联代理服务器', life: 3000 })
+    toast.add({
+      severity: 'warn',
+      summary: lang.toOr('clientNode.cannotOpen', '无法跳转'),
+      detail: lang.toOr('clientNode.proxyNotLinked', '该代理未关联代理服务器'),
+      life: 3000,
+    })
     return
   }
   const formatted = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host
@@ -218,7 +226,7 @@ async function autoDetect() {
       const node = targets[index]
       if (result.status === 'fulfilled') {
         applyNode(result.value)
-        connectionStates.value[node.id] = { ok: true, message: 'SSH 连接正常' }
+        connectionStates.value[node.id] = { ok: true, message: lang.toOr('clientNode.sshConnectionOk', 'SSH 连接正常') }
       } else {
         connectionStates.value[node.id] = { ok: false, message: errorText(result.reason) }
       }
@@ -269,27 +277,27 @@ function openEdit(row: ClientNode) {
 
 async function save() {
   if (!form.name.trim()) {
-    notifyWarn('请输入名称')
+    notifyWarn(lang.toOr('clientNode.nameRequired', '请输入名称'))
     return
   }
   if (!form.host.trim()) {
-    notifyWarn('请输入节点地址')
+    notifyWarn(lang.toOr('clientNode.hostRequired', '请输入节点地址'))
     return
   }
   if (!form.username.trim()) {
-    notifyWarn('请输入 SSH 用户名')
+    notifyWarn(lang.toOr('clientNode.usernameRequired', '请输入 SSH 用户名'))
     return
   }
   if (!form.sshPort || form.sshPort < 1 || form.sshPort > 65535) {
-    notifyWarn('SSH 端口需在 1-65535 之间')
+    notifyWarn(lang.toOr('clientNode.sshPortRange', 'SSH 端口需在 1-65535 之间'))
     return
   }
   if (form.authType === 'password' && !form.password) {
-    notifyWarn('请输入 SSH 密码')
+    notifyWarn(lang.toOr('clientNode.passwordRequired', '请输入 SSH 密码'))
     return
   }
   if (form.authType === 'key' && !form.privateKey.trim()) {
-    notifyWarn('请粘贴 SSH 私钥')
+    notifyWarn(lang.toOr('clientNode.privateKeyRequired', '请粘贴 SSH 私钥'))
     return
   }
 
@@ -312,13 +320,15 @@ async function save() {
       })
     toast.add({
       severity: 'success',
-      summary: '保存成功',
-      detail: editing.value ? '客户端节点已更新' : '客户端节点已添加',
+      summary: lang.toOr('clientNode.saveSuccess', '保存成功'),
+      detail: editing.value
+        ? lang.toOr('clientNode.nodeUpdated', '客户端节点已更新')
+        : lang.toOr('clientNode.nodeAdded', '客户端节点已添加'),
       life: 2600,
     })
     dialogVisible.value = false
   } catch (err) {
-    notifyError('保存失败', err)
+    notifyError(lang.toOr('clientNode.saveFailed', '保存失败'), err)
   } finally {
     saving.value = false
   }
@@ -330,10 +340,10 @@ async function testNode(row: ClientNode) {
   try {
     const result = await ProxyService.TestNode(row)
     connectionStates.value[row.id] = { ok: true, message: result }
-    toast.add({ severity: 'success', summary: '连接成功', detail: result, life: 5000 })
+    toast.add({ severity: 'success', summary: lang.toOr('clientNode.connectSuccess', '连接成功'), detail: result, life: 5000 })
   } catch (err) {
     connectionStates.value[row.id] = { ok: false, message: errorText(err) }
-    toast.add({ severity: 'error', summary: '连接失败', detail: errorText(err), life: 6000 })
+    toast.add({ severity: 'error', summary: lang.toOr('clientNode.connectFailed', '连接失败'), detail: errorText(err), life: 6000 })
   } finally {
     busyId.value = ''
     busyAction.value = ''
@@ -361,7 +371,7 @@ async function testForm() {
 }
 
 function openTraffic(node: ClientNode) {
-  trafficTitle.value = `节点测速 · ${node.name}`
+  trafficTitle.value = lang.toOr('clientNode.speedTestTitle', '节点测速') + ' · ' + node.name
   trafficFetcher.value = () => ProxyService.GetNodeTraffic(node.id)
   trafficVisible.value = true
 }
@@ -372,7 +382,7 @@ function nodeSpeedFetcher(id: string) {
 
 async function deployNode(row: ClientNode) {
   logNodeId.value = row.id
-  logTitle.value = `部署 frpc · ${row.name}`
+  logTitle.value = lang.toOr('clientNode.deployFrpcTitle', '部署 frpc') + ' · ' + row.name
   logMode.value = 'deploy'
   logVisible.value = true
   logs.value = []
@@ -384,16 +394,16 @@ async function deployNode(row: ClientNode) {
     applyNode(updated)
     toast.add({
       severity: 'success',
-      summary: '部署完成',
+      summary: lang.toOr('clientNode.deploySuccess', '部署完成'),
       detail: updated.configured
         ? `${updated.name} 上的 frpc 已启动`
-        : 'frpc 已安装，请先在「配置本地代理」中关联此节点',
+        : lang.toOr('clientNode.frpcInstalledNotLinked', 'frpc 已安装，请先在「配置本地代理」中关联此节点'),
       life: 4000,
     })
   } catch (err) {
     deployFailed.value = true
-    logs.value.push('部署失败: ' + errorText(err))
-    toast.add({ severity: 'error', summary: '部署失败', detail: errorText(err), life: 6000 })
+    logs.value.push(lang.toOr('clientNode.deployFailed', '部署失败') + ': ' + errorText(err))
+    toast.add({ severity: 'error', summary: lang.toOr('clientNode.deployFailed', '部署失败'), detail: errorText(err), life: 6000 })
   } finally {
     busyId.value = ''
     busyAction.value = ''
@@ -406,9 +416,9 @@ async function startNode(row: ClientNode) {
   try {
     const updated = await ProxyService.StartNodeFrpc(row.id)
     applyNode(updated)
-    toast.add({ severity: 'success', summary: 'frpc 已启动', detail: row.name, life: 2600 })
+    toast.add({ severity: 'success', summary: lang.toOr('clientNode.frpcStarted', 'frpc 已启动'), detail: row.name, life: 2600 })
   } catch (err) {
-    notifyError('启动失败', err)
+    notifyError(lang.toOr('clientNode.startFailed', '启动失败'), err)
   } finally {
     busyId.value = ''
     busyAction.value = ''
@@ -421,9 +431,9 @@ async function stopNode(row: ClientNode) {
   try {
     const updated = await ProxyService.StopNodeFrpc(row.id)
     applyNode(updated)
-    toast.add({ severity: 'success', summary: 'frpc 已停止', detail: row.name, life: 2600 })
+    toast.add({ severity: 'success', summary: lang.toOr('clientNode.frpcStopped', 'frpc 已停止'), detail: row.name, life: 2600 })
   } catch (err) {
-    notifyError('停止失败', err)
+    notifyError(lang.toOr('clientNode.stopFailed', '停止失败'), err)
   } finally {
     busyId.value = ''
     busyAction.value = ''
@@ -432,40 +442,45 @@ async function stopNode(row: ClientNode) {
 
 async function showLogs(row: ClientNode) {
   logNodeId.value = row.id
-  logTitle.value = `运行日志 · ${row.name}`
+  logTitle.value = lang.toOr('clientNode.runtimeLogs', '运行日志') + ' · ' + row.name
   logMode.value = 'runtime'
   logVisible.value = true
-  logs.value = ['正在读取 journalctl ...']
+  logs.value = [lang.toOr('clientNode.readingLogs', '正在读取 journalctl ...')]
   try {
     const output = await ProxyService.GetNodeRuntimeLogs(row.id)
-    logs.value = output ? output.split('\n') : ['暂无日志']
+    logs.value = output ? output.split('\n') : [lang.toOr('clientNode.noLogs', '暂无日志')]
   } catch (err) {
-    logs.value = ['读取日志失败: ' + errorText(err)]
+    logs.value = [lang.toOr('clientNode.readLogFailed', '读取日志失败') + ': ' + errorText(err)]
   }
 }
 
 async function removeNode(row: ClientNode) {
-  if (!window.confirm(`确定删除「${row.name}」吗？`)) {
+  if (!window.confirm(lang.toOr('clientNode.confirmDeletePrefix', '确定删除「') + row.name + lang.toOr('clientNode.confirmDeleteSuffix', '」吗？'))) {
     return
   }
   try {
     await ProxyService.DeleteNode(row.id)
     nodes.value = nodes.value.filter((item) => item.id !== row.id)
     await loadLocalProxies()
-    toast.add({ severity: 'success', summary: '已删除', detail: `「${row.name}」已移除`, life: 2400 })
+    toast.add({
+      severity: 'success',
+      summary: lang.toOr('clientNode.deleted', '已删除'),
+      detail: lang.toOr('clientNode.nodeRemovedPrefix', '「') + row.name + lang.toOr('clientNode.nodeRemovedSuffix', '」已移除'),
+      life: 2400,
+    })
   } catch (err) {
-    notifyError('删除失败', err)
+    notifyError(lang.toOr('clientNode.deleteFailed', '删除失败'), err)
   }
 }
 
 function statusLabel(node: ClientNode) {
   if (node.status === 'active') {
-    return '运行中'
+    return lang.toOr('clientNode.statusRunning', '运行中')
   }
   if (node.installed && !node.configured) {
-    return '待配置'
+    return lang.toOr('clientNode.statusPendingConfig', '待配置')
   }
-  return node.installed ? '已安装' : '未安装'
+  return node.installed ? lang.toOr('clientNode.statusInstalled', '已安装') : lang.toOr('clientNode.statusNotInstalled', '未安装')
 }
 
 function statusSeverity(node: ClientNode): TagSeverity {
@@ -492,15 +507,15 @@ function osName(os: string) {
   if (os === 'linux') {
     return 'Linux'
   }
-  return '系统未知'
+  return lang.toOr('clientNode.osUnknown', '系统未知')
 }
 
 function connLabel(node: ClientNode) {
   const state = connectionStates.value[node.id]
   if (!state) {
-    return '未检测'
+    return lang.toOr('clientNode.notDetected', '未检测')
   }
-  return state.ok ? '可连接' : '不可连接'
+  return state.ok ? lang.toOr('clientNode.connectable', '可连接') : lang.toOr('clientNode.notConnectable', '不可连接')
 }
 
 function connClass(node: ClientNode) {
@@ -520,7 +535,7 @@ function errorText(err: unknown) {
 }
 
 function notifyWarn(detail: string) {
-  toast.add({ severity: 'warn', summary: '请检查输入', detail, life: 2600 })
+  toast.add({ severity: 'warn', summary: lang.toOr('clientNode.checkInput', '请检查输入'), detail, life: 2600 })
 }
 
 function notifyError(summary: string, err: unknown) {
@@ -532,24 +547,24 @@ function notifyError(summary: string, err: unknown) {
   <section class="page">
     <header class="page-head">
       <div>
-        <h1>客户端节点</h1>
-        <p>通过 SSH 在 Linux 服务器安装 frpc 后台服务，由节点持续运行，桌面端只负责控制。</p>
+        <h1>{{ lang.toOr('clientNode.pageTitle', '客户端节点') }}</h1>
+        <p>{{ lang.toOr('clientNode.pageDescription', '通过 SSH 在 Linux 服务器安装 frpc 后台服务，由节点持续运行，桌面端只负责控制。') }}</p>
       </div>
       <div class="head-actions">
         <span v-if="detecting" class="detect-hint">
           <i class="fa-solid fa-rotate fa-spin"></i>
-          正在检测节点
+          {{ lang.toOr('clientNode.detectingNodes', '正在检测节点') }}
         </span>
         <Button @click="openCreate">
           <i class="fa-solid fa-plus"></i>
-          <span class="btn-label">添加节点</span>
+          <span class="btn-label">{{ lang.toOr('clientNode.addNode', '添加节点') }}</span>
         </Button>
       </div>
     </header>
 
     <div class="panel">
       <DataTable :value="nodes" :loading="loading" dataKey="id" tableStyle="width: 100%; table-layout: fixed">
-        <Column header="名称" style="width: 10%">
+        <Column :header="lang.toOr('clientNode.name', '名称')" style="width: 10%">
           <template #body="{ data }">
             <div class="node-name">
               <span class="node-icon"><i class="fa-solid fa-server"></i></span>
@@ -557,28 +572,28 @@ function notifyError(summary: string, err: unknown) {
             </div>
           </template>
         </Column>
-        <Column header="地址" style="width: 18%">
+        <Column :header="lang.toOr('clientNode.address', '地址')" style="width: 18%">
           <template #body="{ data }">
             <div class="node-cell">
               <span class="mono node-address">{{ data.host }}:{{ data.sshPort }}</span>
-              <span class="conn-status" :class="connClass(data)" :title="connState(data)?.message || '尚未检测'">
+              <span class="conn-status" :class="connClass(data)" :title="connState(data)?.message || lang.toOr('clientNode.notYetDetected', '尚未检测')">
                 {{ osName(data.os) }} · {{ connLabel(data) }}
               </span>
             </div>
           </template>
         </Column>
-        <Column header="登录" style="width: 10%">
+        <Column :header="lang.toOr('clientNode.login', '登录')" style="width: 10%">
           <template #body="{ data }">
             <span>{{ data.username }}</span>
-            <span class="auth-tag">{{ data.authType === 'key' ? '私钥' : '密码' }}</span>
+            <span class="auth-tag">{{ data.authType === 'key' ? lang.toOr('clientNode.authKey', '私钥') : lang.toOr('clientNode.authPassword', '密码') }}</span>
           </template>
         </Column>
-        <Column header="frpc 状态" style="width: 8%">
+        <Column :header="lang.toOr('clientNode.frpcStatus', 'frpc 状态')" style="width: 8%">
           <template #body="{ data }">
-            <Tag :value="statusLabel(data)" :severity="statusSeverity(data)" :title="data.message || '尚未检测'" />
+            <Tag :value="statusLabel(data)" :severity="statusSeverity(data)" :title="data.message || lang.toOr('clientNode.notYetDetected', '尚未检测')" />
           </template>
         </Column>
-        <Column header="挂载端口" style="width: 19%">
+        <Column :header="lang.toOr('clientNode.mountedPorts', '挂载端口')" style="width: 19%">
           <template #body="{ data }">
             <div v-if="mountedProxies(data.id).length" class="mounted-ports">
               <button
@@ -586,7 +601,7 @@ function notifyError(summary: string, err: unknown) {
                 :key="proxy.id"
                 type="button"
                 class="mounted-port"
-                :title="`${proxy.name} → 本地 ${proxy.host}:${proxy.port}`"
+                :title="`${proxy.name} → ${lang.toOr('clientNode.local', '本地')} ${proxy.host}:${proxy.port}`"
                 @click="openProxyRemote(proxy)"
               >
                 {{ remoteAddress(proxy) }}
@@ -595,7 +610,7 @@ function notifyError(summary: string, err: unknown) {
                 v-if="extraProxyCount(data.id) > 0"
                 type="button"
                 class="mounted-more"
-                :title="`查看全部 ${mountedProxies(data.id).length} 个挂载端口`"
+                :title="lang.toOr('clientNode.viewAllPortsPrefix', '查看全部 ') + mountedProxies(data.id).length + lang.toOr('clientNode.viewAllPortsSuffix', ' 个挂载端口')"
                 @click="openMountDetail(data)"
               >
                 +{{ extraProxyCount(data.id) }}
@@ -604,18 +619,18 @@ function notifyError(summary: string, err: unknown) {
             <span v-else class="muted">—</span>
           </template>
         </Column>
-        <Column header="网速" style="width: 9%">
+        <Column :header="lang.toOr('clientNode.speed', '网速')" style="width: 9%">
           <template #body="{ data }">
             <SpeedCell :fetcher="nodeSpeedFetcher(data.id)" />
           </template>
         </Column>
-        <Column header="操作" style="width: 26%">
+        <Column :header="lang.toOr('clientNode.actions', '操作')" style="width: 26%">
           <template #body="{ data }">
             <div class="row-actions">
-              <Button text rounded severity="secondary" title="测试 SSH 连接" :loading="isBusy(data, 'test')" @click="testNode(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('clientNode.testSshTitle', '测试 SSH 连接')" :loading="isBusy(data, 'test')" @click="testNode(data)">
                 <i v-if="!isBusy(data, 'test')" class="fa-solid fa-plug"></i>
               </Button>
-              <Button text rounded severity="secondary" title="部署 / 更新 frpc" :loading="isBusy(data, 'deploy')" @click="deployNode(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('clientNode.deployUpdateFrpcTitle', '部署 / 更新 frpc')" :loading="isBusy(data, 'deploy')" @click="deployNode(data)">
                 <i v-if="!isBusy(data, 'deploy')" class="fa-solid fa-download"></i>
               </Button>
               <Button
@@ -623,7 +638,7 @@ function notifyError(summary: string, err: unknown) {
                 text
                 rounded
                 severity="success"
-                title="启动 frpc"
+                :title="lang.toOr('clientNode.startFrpcTitle', '启动 frpc')"
                 :loading="isBusy(data, 'start')"
                 @click="startNode(data)"
               >
@@ -634,22 +649,22 @@ function notifyError(summary: string, err: unknown) {
                 text
                 rounded
                 severity="danger"
-                title="停止 frpc"
+                :title="lang.toOr('clientNode.stopFrpcTitle', '停止 frpc')"
                 :loading="isBusy(data, 'stop')"
                 @click="stopNode(data)"
               >
                 <i v-if="!isBusy(data, 'stop')" class="fa-solid fa-stop"></i>
               </Button>
-              <Button text rounded severity="secondary" title="查看运行日志" @click="showLogs(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('clientNode.viewLogsTitle', '查看运行日志')" @click="showLogs(data)">
                 <i class="fa-solid fa-file-lines"></i>
               </Button>
-              <Button text rounded severity="secondary" title="测速（每秒上行/下行）" @click="openTraffic(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('clientNode.speedTitle', '测速（每秒上行/下行）')" @click="openTraffic(data)">
                 <i class="fa-solid fa-gauge-high"></i>
               </Button>
-              <Button text rounded severity="secondary" title="编辑" @click="openEdit(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('clientNode.edit', '编辑')" @click="openEdit(data)">
                 <i class="fa-solid fa-pen"></i>
               </Button>
-              <Button text rounded severity="danger" title="删除" @click="removeNode(data)">
+              <Button text rounded severity="danger" :title="lang.toOr('clientNode.delete', '删除')" @click="removeNode(data)">
                 <i class="fa-solid fa-trash-can"></i>
               </Button>
             </div>
@@ -659,8 +674,8 @@ function notifyError(summary: string, err: unknown) {
         <template #empty>
           <div class="empty-state">
             <i class="fa-solid fa-server"></i>
-            <strong>还没有客户端节点</strong>
-            <span>添加一台 Linux 服务器，桌面端会自动安装并托管 frpc</span>
+            <strong>{{ lang.toOr('clientNode.emptyTitle', '还没有客户端节点') }}</strong>
+            <span>{{ lang.toOr('clientNode.emptyDescription', '添加一台 Linux 服务器，桌面端会自动安装并托管 frpc') }}</span>
           </div>
         </template>
       </DataTable>
@@ -670,49 +685,49 @@ function notifyError(summary: string, err: unknown) {
       v-model:visible="dialogVisible"
       modal
       :draggable="false"
-      :header="editing ? '编辑客户端节点' : '添加客户端节点'"
+      :header="editing ? lang.toOr('clientNode.editNodeTitle', '编辑客户端节点') : lang.toOr('clientNode.addNodeTitle', '添加客户端节点')"
       :style="{ width: '580px' }"
     >
       <div class="form-grid">
         <div class="field">
-          <label>名称</label>
-          <InputText v-model="form.name" fluid placeholder="例如：内网应用服务器" maxlength="40" />
+          <label>{{ lang.toOr('clientNode.name', '名称') }}</label>
+          <InputText v-model="form.name" fluid :placeholder="lang.toOr('clientNode.namePlaceholder', '例如：内网应用服务器')" maxlength="40" />
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label>节点地址 / IP</label>
-            <InputText v-model="form.host" fluid placeholder="192.168.1.20 或 node.local" />
+            <label>{{ lang.toOr('clientNode.hostLabel', '节点地址 / IP') }}</label>
+            <InputText v-model="form.host" fluid :placeholder="lang.toOr('clientNode.hostPlaceholder', '192.168.1.20 或 node.local')" />
           </div>
           <div class="field">
-            <label>SSH 端口</label>
+            <label>{{ lang.toOr('clientNode.sshPortLabel', 'SSH 端口') }}</label>
             <InputNumber v-model="form.sshPort" fluid :min="1" :max="65535" :use-grouping="false" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label>SSH 用户名</label>
+            <label>{{ lang.toOr('clientNode.sshUsernameLabel', 'SSH 用户名') }}</label>
             <InputText v-model="form.username" fluid placeholder="root" />
           </div>
           <div class="field">
-            <label>认证方式</label>
+            <label>{{ lang.toOr('clientNode.authTypeLabel', '认证方式') }}</label>
             <Select v-model="form.authType" fluid :options="authOptions" option-label="label" option-value="value" />
           </div>
         </div>
 
         <div v-if="form.authType === 'password'" class="field">
-          <label>SSH 密码</label>
-          <Password v-model="form.password" fluid :feedback="false" toggle-mask placeholder="输入服务器登录密码" />
+          <label>{{ lang.toOr('clientNode.sshPasswordLabel', 'SSH 密码') }}</label>
+          <Password v-model="form.password" fluid :feedback="false" toggle-mask :placeholder="lang.toOr('clientNode.passwordPlaceholder', '输入服务器登录密码')" />
         </div>
         <div v-else class="field">
-          <label>SSH 私钥</label>
+          <label>{{ lang.toOr('clientNode.sshPrivateKeyLabel', 'SSH 私钥') }}</label>
           <Textarea v-model="form.privateKey" fluid rows="5" class="key-area" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" />
-          <span class="hint">支持 OpenSSH 私钥（不支持带 passphrase 的私钥）</span>
+          <span class="hint">{{ lang.toOr('clientNode.privateKeyHint', '支持 OpenSSH 私钥（不支持带 passphrase 的私钥）') }}</span>
         </div>
 
         <span class="hint">
-          节点负责运行 frpc；本地代理中的 IP 和端口是「从节点视角」访问内网服务的地址。
+          {{ lang.toOr('clientNode.nodeRoleHint', '节点负责运行 frpc；本地代理中的 IP 和端口是「从节点视角」访问内网服务的地址。') }}
         </span>
 
         <div v-if="testResult" class="test-result" :class="{ ok: testOk }">
@@ -725,13 +740,13 @@ function notifyError(summary: string, err: unknown) {
         <div class="dialog-footer">
           <Button text severity="secondary" :loading="testingForm" @click="testForm">
             <i v-if="!testingForm" class="fa-solid fa-plug"></i>
-            <span class="btn-label">测试连接</span>
+            <span class="btn-label">{{ lang.toOr('clientNode.testConnection', '测试连接') }}</span>
           </Button>
           <div class="footer-actions">
-            <Button text severity="secondary" label="取消" @click="dialogVisible = false" />
+            <Button text severity="secondary" :label="lang.toOr('clientNode.cancel', '取消')" @click="dialogVisible = false" />
             <Button :loading="saving" @click="save">
               <i v-if="!saving" class="fa-solid fa-check"></i>
-              <span class="btn-label">保存</span>
+              <span class="btn-label">{{ lang.toOr('clientNode.save', '保存') }}</span>
             </Button>
           </div>
         </div>
@@ -748,16 +763,16 @@ function notifyError(summary: string, err: unknown) {
       :style="{ width: '720px' }"
     >
       <div class="log-status">
-        <Tag v-if="busyAction === 'deploy'" severity="warn" value="部署中" />
-        <Tag v-else-if="logMode === 'runtime'" severity="info" value="运行日志" />
-        <Tag v-else-if="deployFailed" severity="danger" value="部署失败" />
-        <Tag v-else severity="success" value="部署完成" />
-        <span class="muted">远程命令输出会实时显示在这里</span>
+        <Tag v-if="busyAction === 'deploy'" severity="warn" :value="lang.toOr('clientNode.deploying', '部署中')" />
+        <Tag v-else-if="logMode === 'runtime'" severity="info" :value="lang.toOr('clientNode.runtimeLogs', '运行日志')" />
+        <Tag v-else-if="deployFailed" severity="danger" :value="lang.toOr('clientNode.deployFailed', '部署失败')" />
+        <Tag v-else severity="success" :value="lang.toOr('clientNode.deploySuccess', '部署完成')" />
+        <span class="muted">{{ lang.toOr('clientNode.remoteOutputHint', '远程命令输出会实时显示在这里') }}</span>
       </div>
-      <pre ref="logRef" class="log-view">{{ logs.length ? logs.join('\n') : '等待远程输出...' }}</pre>
+      <pre ref="logRef" class="log-view">{{ logs.length ? logs.join('\n') : lang.toOr('clientNode.waitingOutput', '等待远程输出...') }}</pre>
 
       <template #footer>
-        <Button text severity="secondary" :disabled="!!busyId" label="关闭" @click="logVisible = false" />
+        <Button text severity="secondary" :disabled="!!busyId" :label="lang.toOr('clientNode.close', '关闭')" @click="logVisible = false" />
       </template>
     </Dialog>
 
@@ -765,7 +780,7 @@ function notifyError(summary: string, err: unknown) {
       v-model:visible="mountDetailVisible"
       modal
       :draggable="false"
-      :header="`挂载详情 · ${mountDetailNode?.name ?? ''}`"
+      :header="lang.toOr('clientNode.mountDetailTitle', '挂载详情') + ' · ' + (mountDetailNode?.name ?? '')"
       :style="{ width: '560px' }"
     >
       <div v-if="mountDetailNode" class="mount-detail-list">
@@ -774,7 +789,7 @@ function notifyError(summary: string, err: unknown) {
           :key="proxy.id"
           type="button"
           class="mount-detail-row"
-          :title="`在浏览器打开 ${remoteAddress(proxy)}`"
+          :title="lang.toOr('clientNode.openInBrowser', '在浏览器打开') + ' ' + remoteAddress(proxy)"
           @click="openProxyRemote(proxy)"
         >
           <span class="mount-detail-name">{{ proxy.name }}</span>
@@ -783,10 +798,10 @@ function notifyError(summary: string, err: unknown) {
           <span class="mono mount-detail-remote">{{ remoteAddress(proxy) }}</span>
           <i class="fa-solid fa-arrow-up-right-from-square"></i>
         </button>
-        <p v-if="!mountedProxies(mountDetailNode.id).length" class="muted">暂无挂载的代理</p>
+        <p v-if="!mountedProxies(mountDetailNode.id).length" class="muted">{{ lang.toOr('clientNode.noMountedProxies', '暂无挂载的代理') }}</p>
       </div>
       <template #footer>
-        <Button text severity="secondary" label="关闭" @click="mountDetailVisible = false" />
+        <Button text severity="secondary" :label="lang.toOr('clientNode.close', '关闭')" @click="mountDetailVisible = false" />
       </template>
     </Dialog>
 

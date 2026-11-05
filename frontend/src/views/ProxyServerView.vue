@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { Browser, Events } from '@wailsio/runtime'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
@@ -17,6 +17,7 @@ import type { ProxyServer, TrafficStats } from '../../bindings/changeme'
 import TrafficDialog from '../components/TrafficDialog.vue'
 import SpeedCell from '../components/SpeedCell.vue'
 import { useProxyStore } from '../stores/proxy'
+import { useLanguageStore } from '../stores/language'
 
 type TagSeverity = 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast'
 
@@ -37,10 +38,12 @@ interface ServerForm {
   portMessage: string
 }
 
-const authOptions = [
-  { label: '密码', value: 'password' },
-  { label: '私钥', value: 'key' },
-]
+const lang = useLanguageStore()
+
+const authOptions = computed(() => [
+  { label: lang.toOr('proxyServer.authPassword', '密码'), value: 'password' },
+  { label: lang.toOr('proxyServer.authKey', '私钥'), value: 'key' },
+])
 
 const store = useProxyStore()
 const toast = useToast()
@@ -76,7 +79,7 @@ onMounted(async () => {
   try {
     await store.loadServers()
   } catch (err) {
-    notifyError('加载失败', err)
+    notifyError(lang.toOr('proxyServer.loadFailed', '加载失败'), err)
     return
   }
   await autoDetectFrps()
@@ -187,31 +190,31 @@ function openEdit(row: ProxyServer) {
 
 async function save() {
   if (!form.name.trim()) {
-    notifyWarn('请输入名称')
+    notifyWarn(lang.toOr('proxyServer.inputName', '请输入名称'))
     return
   }
   if (!form.host.trim()) {
-    notifyWarn('请输入公网服务器地址')
+    notifyWarn(lang.toOr('proxyServer.inputHost', '请输入公网服务器地址'))
     return
   }
   if (!form.username.trim()) {
-    notifyWarn('请输入 SSH 用户名')
+    notifyWarn(lang.toOr('proxyServer.inputSshUser', '请输入 SSH 用户名'))
     return
   }
   if (!form.sshPort || form.sshPort < 1 || form.sshPort > 65535) {
-    notifyWarn('SSH 端口需在 1-65535 之间')
+    notifyWarn(lang.toOr('proxyServer.sshPortRange', 'SSH 端口需在 1-65535 之间'))
     return
   }
   if (!form.frpsPort || form.frpsPort < 1 || form.frpsPort > 65535) {
-    notifyWarn('frps 端口需在 1-65535 之间')
+    notifyWarn(lang.toOr('proxyServer.frpsPortRange', 'frps 端口需在 1-65535 之间'))
     return
   }
   if (form.authType === 'password' && !form.password) {
-    notifyWarn('请输入 SSH 密码')
+    notifyWarn(lang.toOr('proxyServer.inputSshPassword', '请输入 SSH 密码'))
     return
   }
   if (form.authType === 'key' && !form.privateKey.trim()) {
-    notifyWarn('请粘贴 SSH 私钥')
+    notifyWarn(lang.toOr('proxyServer.pasteSshKey', '请粘贴 SSH 私钥'))
     return
   }
 
@@ -220,13 +223,15 @@ async function save() {
     await store.saveServer(toPayload())
     toast.add({
       severity: 'success',
-      summary: '保存成功',
-      detail: editing.value ? '代理服务器配置已更新' : '代理服务器已添加',
+      summary: lang.toOr('proxyServer.saveSuccess', '保存成功'),
+      detail: editing.value
+        ? lang.toOr('proxyServer.configUpdated', '代理服务器配置已更新')
+        : lang.toOr('proxyServer.serverAdded', '代理服务器已添加'),
       life: 2600,
     })
     dialogVisible.value = false
   } catch (err) {
-    notifyError('保存失败', err)
+    notifyError(lang.toOr('proxyServer.saveFailed', '保存失败'), err)
   } finally {
     saving.value = false
   }
@@ -265,13 +270,13 @@ async function discoverForm() {
       discoverResult.value = found.message
       toast.add({
         severity: 'success',
-        summary: '发现已有 frps 配置',
-        detail: '已自动填充监听端口与 Token，可直接保存复用',
+        summary: lang.toOr('proxyServer.foundExistingConfig', '发现已有 frps 配置'),
+        detail: lang.toOr('proxyServer.autoFilled', '已自动填充监听端口与 Token，可直接保存复用'),
         life: 4000,
       })
     } else {
       discoverOk.value = false
-      discoverResult.value = found.message || '未发现已安装的 frps'
+      discoverResult.value = found.message || lang.toOr('proxyServer.noFrpsFound', '未发现已安装的 frps')
     }
   } catch (err) {
     discoverOk.value = false
@@ -285,16 +290,16 @@ async function testServer(row: ProxyServer) {
   testingId.value = row.id
   try {
     const result = await ProxyService.TestServer(row)
-    toast.add({ severity: 'success', summary: '连接成功', detail: result, life: 5000 })
+    toast.add({ severity: 'success', summary: lang.toOr('proxyServer.connectSuccess', '连接成功'), detail: result, life: 5000 })
   } catch (err) {
-    toast.add({ severity: 'error', summary: '连接失败', detail: errorText(err), life: 6000 })
+    toast.add({ severity: 'error', summary: lang.toOr('proxyServer.connectFailed', '连接失败'), detail: errorText(err), life: 6000 })
   } finally {
     testingId.value = ''
   }
 }
 
 function openTraffic(row: ProxyServer) {
-  trafficTitle.value = `流量监控 · ${row.name}`
+  trafficTitle.value = `${lang.toOr('proxyServer.trafficTitle', '流量监控')} · ${row.name}`
   trafficFetcher.value = () => ProxyService.GetServerTraffic(row)
   trafficVisible.value = true
 }
@@ -308,12 +313,12 @@ async function checkPort(row: ProxyServer) {
   try {
     const checked = await store.checkServerPort(row)
     if (checked.portStatus === 'ok') {
-      toast.add({ severity: 'success', summary: '端口可访问', detail: checked.portMessage, life: 3200 })
+      toast.add({ severity: 'success', summary: lang.toOr('proxyServer.portReachable', '端口可访问'), detail: checked.portMessage, life: 3200 })
     } else {
-      toast.add({ severity: 'error', summary: '端口不可访问', detail: checked.portMessage, life: 5200 })
+      toast.add({ severity: 'error', summary: lang.toOr('proxyServer.portUnreachable', '端口不可访问'), detail: checked.portMessage, life: 5200 })
     }
   } catch (err) {
-    notifyError('端口检测失败', err)
+    notifyError(lang.toOr('proxyServer.portCheckFailed', '端口检测失败'), err)
   } finally {
     checkingPortId.value = ''
   }
@@ -321,9 +326,11 @@ async function checkPort(row: ProxyServer) {
 
 function portStatusLabel(server: ProxyServer) {
   if (server.portStatus === 'ok') {
-    return '可访问'
+    return lang.toOr('proxyServer.statusAccessible', '可访问')
   }
-  return server.portStatus === 'failed' ? '不可访问' : '未检测'
+  return server.portStatus === 'failed'
+    ? lang.toOr('proxyServer.statusInaccessible', '不可访问')
+    : lang.toOr('proxyServer.statusNotChecked', '未检测')
 }
 
 function portStatusClass(server: ProxyServer) {
@@ -361,7 +368,7 @@ async function copyAddress(row: ProxyServer) {
     document.execCommand('copy')
     document.body.removeChild(textarea)
   }
-  toast.add({ severity: 'success', summary: '已复制', detail: text, life: 2200 })
+  toast.add({ severity: 'success', summary: lang.toOr('proxyServer.copied', '已复制'), detail: text, life: 2200 })
 }
 
 // 安装前发现已有配置；返回 true 表示已沿用现有配置并跳过安装。
@@ -372,9 +379,9 @@ async function adoptExistingFrps(row: ProxyServer): Promise<boolean> {
     if (!found.configPath || found.status !== 'active') {
       return false
     }
-    const detail = found.message || '发现服务器上已有 frps'
+    const detail = found.message || lang.toOr('proxyServer.foundFrpsOnServer', '发现服务器上已有 frps')
     const useExisting = window.confirm(
-      `${detail}\n\n是否沿用现有配置并跳过安装？\n点击“取消”将继续重新安装，可能覆盖现有 frps 配置。`,
+      `${detail}\n\n${lang.toOr('proxyServer.adoptConfirm', '是否沿用现有配置并跳过安装？')}\n${lang.toOr('proxyServer.adoptConfirmHint', '点击“取消”将继续重新安装，可能覆盖现有 frps 配置。')}`,
     )
     if (!useExisting) {
       return false
@@ -389,8 +396,8 @@ async function adoptExistingFrps(row: ProxyServer): Promise<boolean> {
     store.applyServer(saved)
     toast.add({
       severity: 'success',
-      summary: '已沿用现有配置',
-      detail: `跳过重复安装${found.configPath ? ' · ' + found.configPath : ''}`,
+      summary: lang.toOr('proxyServer.adoptedExisting', '已沿用现有配置'),
+      detail: lang.toOr('proxyServer.skipReinstall', '跳过重复安装') + (found.configPath ? ' · ' + found.configPath : ''),
       life: 5000,
     })
     return true
@@ -420,14 +427,14 @@ async function installServer(row: ProxyServer) {
     store.applyServer(updated)
     toast.add({
       severity: 'success',
-      summary: '安装完成',
-      detail: `${updated.name} 上的 frps 已启动`,
+      summary: lang.toOr('proxyServer.installDone', '安装完成'),
+      detail: `${updated.name}${lang.toOr('proxyServer.frpsStartedSuffix', ' 上的 frps 已启动')}`,
       life: 4000,
     })
   } catch (err) {
     installFailed.value = true
-    installLogs.value.push('安装失败: ' + errorText(err))
-    toast.add({ severity: 'error', summary: '安装失败', detail: errorText(err), life: 6000 })
+    installLogs.value.push(`${lang.toOr('proxyServer.installFailed', '安装失败')}: ${errorText(err)}`)
+    toast.add({ severity: 'error', summary: lang.toOr('proxyServer.installFailed', '安装失败'), detail: errorText(err), life: 6000 })
   } finally {
     installing.value = false
     stopLogListener?.()
@@ -436,22 +443,27 @@ async function installServer(row: ProxyServer) {
 }
 
 async function removeServer(row: ProxyServer) {
-  if (!window.confirm(`确定删除「${row.name}」吗？`)) {
+  if (!window.confirm(`${lang.toOr('proxyServer.deleteConfirmPrefix', '确定删除「')}${row.name}${lang.toOr('proxyServer.deleteConfirmSuffix', '」吗？')}`)) {
     return
   }
   try {
     await store.deleteServer(row.id)
-    toast.add({ severity: 'success', summary: '已删除', detail: `「${row.name}」已移除`, life: 2400 })
+    toast.add({
+      severity: 'success',
+      summary: lang.toOr('proxyServer.deleted', '已删除'),
+      detail: `${lang.toOr('proxyServer.removedPrefix', '「')}${row.name}${lang.toOr('proxyServer.removedSuffix', '」已移除')}`,
+      life: 2400,
+    })
   } catch (err) {
-    notifyError('删除失败', err)
+    notifyError(lang.toOr('proxyServer.deleteFailed', '删除失败'), err)
   }
 }
 
 function statusLabel(server: ProxyServer): string {
   if (server.status === 'active') {
-    return '运行中'
+    return lang.toOr('proxyServer.statusRunning', '运行中')
   }
-  return server.installed ? '已安装' : '未安装'
+  return server.installed ? lang.toOr('proxyServer.statusInstalled', '已安装') : lang.toOr('proxyServer.statusNotInstalled', '未安装')
 }
 
 function statusSeverity(server: ProxyServer): TagSeverity {
@@ -466,7 +478,7 @@ function errorText(err: unknown) {
 }
 
 function notifyWarn(detail: string) {
-  toast.add({ severity: 'warn', summary: '请检查输入', detail, life: 2600 })
+  toast.add({ severity: 'warn', summary: lang.toOr('proxyServer.checkInput', '请检查输入'), detail, life: 2600 })
 }
 
 function notifyError(summary: string, err: unknown) {
@@ -478,17 +490,17 @@ function notifyError(summary: string, err: unknown) {
   <section class="page">
     <header class="page-head">
       <div>
-        <h1>代理服务器</h1>
-        <p>添加公网服务器并通过 SSH 连接，一键安装 frps 服务端。</p>
+        <h1>{{ lang.toOr('proxyServer.pageTitle', '代理服务器') }}</h1>
+        <p>{{ lang.toOr('proxyServer.pageDesc', '添加公网服务器并通过 SSH 连接，一键安装 frps 服务端。') }}</p>
       </div>
       <div class="head-actions">
         <span v-if="detecting" class="detect-hint">
           <i class="fa-solid fa-rotate fa-spin"></i>
-          正在检测 frps
+          {{ lang.toOr('proxyServer.detectingFrps', '正在检测 frps') }}
         </span>
         <Button @click="openCreate">
           <i class="fa-solid fa-plus"></i>
-          <span class="btn-label">添加服务器</span>
+          <span class="btn-label">{{ lang.toOr('proxyServer.addServer', '添加服务器') }}</span>
         </Button>
       </div>
     </header>
@@ -500,7 +512,7 @@ function notifyError(summary: string, err: unknown) {
         dataKey="id"
         tableStyle="width: 100%; table-layout: fixed"
       >
-        <Column header="名称" style="width: 13%">
+        <Column :header="lang.toOr('proxyServer.colName', '名称')" style="width: 13%">
           <template #body="{ data }">
             <div class="server-name">
               <span class="server-icon"><i class="fa-solid fa-cloud"></i></span>
@@ -508,67 +520,67 @@ function notifyError(summary: string, err: unknown) {
             </div>
           </template>
         </Column>
-        <Column header="服务器" style="width: 22%">
+        <Column :header="lang.toOr('proxyServer.colServer', '服务器')" style="width: 22%">
           <template #body="{ data }">
             <div class="server-cell">
               <span class="mono">{{ data.host }}:{{ data.sshPort }}</span>
-              <span class="server-meta">{{ data.username }} · {{ data.authType === 'key' ? '私钥' : '密码' }}</span>
+              <span class="server-meta">{{ data.username }} · {{ data.authType === 'key' ? lang.toOr('proxyServer.authKey', '私钥') : lang.toOr('proxyServer.authPassword', '密码') }}</span>
             </div>
           </template>
         </Column>
-        <Column header="frps 端口" style="width: 15%">
+        <Column :header="lang.toOr('proxyServer.colFrpsPort', 'frps 端口')" style="width: 15%">
           <template #body="{ data }">
             <div class="port-cell">
               <div class="port-line">
-                <button class="port-link" type="button" title="在浏览器打开" @click="openServer(data)">
+                <button class="port-link" type="button" :title="lang.toOr('proxyServer.openInBrowser', '在浏览器打开')" @click="openServer(data)">
                   <span class="port-pill">{{ data.frpsPort }}</span>
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </button>
-                <button class="copy-btn" type="button" title="复制公网地址" @click="copyAddress(data)">
+                <button class="copy-btn" type="button" :title="lang.toOr('proxyServer.copyAddress', '复制公网地址')" @click="copyAddress(data)">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
-              <span class="port-status" :class="portStatusClass(data)" :title="data.portMessage || '尚未检测'">
+              <span class="port-status" :class="portStatusClass(data)" :title="data.portMessage || lang.toOr('proxyServer.notDetectedYet', '尚未检测')">
                 {{ portStatusLabel(data) }}
               </span>
             </div>
           </template>
         </Column>
-        <Column header="状态" style="width: 10%">
+        <Column :header="lang.toOr('proxyServer.colStatus', '状态')" style="width: 10%">
           <template #body="{ data }">
             <Tag :value="statusLabel(data)" :severity="statusSeverity(data)" />
           </template>
         </Column>
-        <Column header="网速" style="width: 12%">
+        <Column :header="lang.toOr('proxyServer.colSpeed', '网速')" style="width: 12%">
           <template #body="{ data }">
             <SpeedCell :fetcher="serverSpeedFetcher(data)" />
           </template>
         </Column>
-        <Column header="操作" style="width: 28%">
+        <Column :header="lang.toOr('proxyServer.colActions', '操作')" style="width: 28%">
           <template #body="{ data }">
             <div class="row-actions">
-              <Button text rounded severity="secondary" title="测试 SSH 连接" :loading="testingId === data.id" @click="testServer(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('proxyServer.testSsh', '测试 SSH 连接')" :loading="testingId === data.id" @click="testServer(data)">
                 <i v-if="testingId !== data.id" class="fa-solid fa-plug"></i>
               </Button>
-              <Button text rounded severity="secondary" title="检测 frps 端口" :loading="checkingPortId === data.id" @click="checkPort(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('proxyServer.checkFrpsPort', '检测 frps 端口')" :loading="checkingPortId === data.id" @click="checkPort(data)">
                 <i v-if="checkingPortId !== data.id" class="fa-solid fa-network-wired"></i>
               </Button>
-              <Button text rounded severity="secondary" title="查看上行 / 下行" @click="openTraffic(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('proxyServer.viewTraffic', '查看上行 / 下行')" @click="openTraffic(data)">
                 <i class="fa-solid fa-chart-line"></i>
               </Button>
               <Button
                 text
                 rounded
                 severity="secondary"
-                :title="data.installed ? '重新安装 frps' : '安装 frps'"
+                :title="data.installed ? lang.toOr('proxyServer.reinstallFrps', '重新安装 frps') : lang.toOr('proxyServer.installFrps', '安装 frps')"
                 @click="installServer(data)"
               >
                 <i class="fa-solid fa-download"></i>
               </Button>
-              <Button text rounded severity="secondary" title="编辑" @click="openEdit(data)">
+              <Button text rounded severity="secondary" :title="lang.toOr('proxyServer.edit', '编辑')" @click="openEdit(data)">
                 <i class="fa-solid fa-pen"></i>
               </Button>
-              <Button text rounded severity="danger" title="删除" @click="removeServer(data)">
+              <Button text rounded severity="danger" :title="lang.toOr('proxyServer.delete', '删除')" @click="removeServer(data)">
                 <i class="fa-solid fa-trash-can"></i>
               </Button>
             </div>
@@ -578,8 +590,8 @@ function notifyError(summary: string, err: unknown) {
         <template #empty>
           <div class="empty-state">
             <i class="fa-solid fa-cloud"></i>
-            <strong>还没有代理服务器</strong>
-            <span>添加一台公网 Linux 服务器，自动部署 frps</span>
+            <strong>{{ lang.toOr('proxyServer.emptyTitle', '还没有代理服务器') }}</strong>
+            <span>{{ lang.toOr('proxyServer.emptyDesc', '添加一台公网 Linux 服务器，自动部署 frps') }}</span>
           </div>
         </template>
       </DataTable>
@@ -589,43 +601,43 @@ function notifyError(summary: string, err: unknown) {
       v-model:visible="dialogVisible"
       modal
       :draggable="false"
-      :header="editing ? '编辑代理服务器' : '添加代理服务器'"
+      :header="editing ? lang.toOr('proxyServer.editTitle', '编辑代理服务器') : lang.toOr('proxyServer.addTitle', '添加代理服务器')"
       :style="{ width: '580px' }"
     >
       <div class="form-grid">
         <div class="field">
-          <label>名称</label>
-          <InputText v-model="form.name" fluid placeholder="例如：香港中转" maxlength="40" />
+          <label>{{ lang.toOr('proxyServer.colName', '名称') }}</label>
+          <InputText v-model="form.name" fluid :placeholder="lang.toOr('proxyServer.phName', '例如：香港中转')" maxlength="40" />
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label>公网地址 / IP</label>
-            <InputText v-model="form.host" fluid placeholder="203.0.113.10 或 example.com" />
+            <label>{{ lang.toOr('proxyServer.labelPublicHost', '公网地址 / IP') }}</label>
+            <InputText v-model="form.host" fluid :placeholder="lang.toOr('proxyServer.phHost', '203.0.113.10 或 example.com')" />
           </div>
           <div class="field">
-            <label>SSH 端口</label>
+            <label>{{ lang.toOr('proxyServer.labelSshPort', 'SSH 端口') }}</label>
             <InputNumber v-model="form.sshPort" fluid :min="1" :max="65535" :use-grouping="false" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label>SSH 用户名</label>
+            <label>{{ lang.toOr('proxyServer.labelSshUser', 'SSH 用户名') }}</label>
             <InputText v-model="form.username" fluid placeholder="root" />
           </div>
           <div class="field">
-            <label>认证方式</label>
+            <label>{{ lang.toOr('proxyServer.labelAuthType', '认证方式') }}</label>
             <Select v-model="form.authType" fluid :options="authOptions" option-label="label" option-value="value" />
           </div>
         </div>
 
         <div v-if="form.authType === 'password'" class="field">
-          <label>SSH 密码</label>
-          <Password v-model="form.password" fluid :feedback="false" toggle-mask placeholder="输入服务器登录密码" />
+          <label>{{ lang.toOr('proxyServer.labelSshPassword', 'SSH 密码') }}</label>
+          <Password v-model="form.password" fluid :feedback="false" toggle-mask :placeholder="lang.toOr('proxyServer.phPassword', '输入服务器登录密码')" />
         </div>
         <div v-else class="field">
-          <label>SSH 私钥</label>
+          <label>{{ lang.toOr('proxyServer.labelSshKey', 'SSH 私钥') }}</label>
           <Textarea
             v-model="form.privateKey"
             fluid
@@ -633,24 +645,24 @@ function notifyError(summary: string, err: unknown) {
             class="key-area"
             placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
           />
-          <span class="hint">支持 OpenSSH 私钥（不支持带 passphrase 的私钥）</span>
+          <span class="hint">{{ lang.toOr('proxyServer.hintPrivateKey', '支持 OpenSSH 私钥（不支持带 passphrase 的私钥）') }}</span>
         </div>
 
         <div class="form-row">
           <div class="field">
-            <label>frps 监听端口</label>
+            <label>{{ lang.toOr('proxyServer.labelFrpsPort', 'frps 监听端口') }}</label>
             <InputNumber v-model="form.frpsPort" fluid :min="1" :max="65535" :use-grouping="false" />
-            <span class="hint">请确保云服务器安全组已放行该 TCP 端口</span>
+            <span class="hint">{{ lang.toOr('proxyServer.hintFirewall', '请确保云服务器安全组已放行该 TCP 端口') }}</span>
           </div>
           <div class="field">
-            <label>认证 Token</label>
+            <label>{{ lang.toOr('proxyServer.labelToken', '认证 Token') }}</label>
             <div class="token-row">
-              <InputText v-model="form.token" fluid class="mono" placeholder="frpc 连接凭证" />
-              <Button text rounded severity="secondary" title="随机生成" @click="form.token = randomToken()">
+              <InputText v-model="form.token" fluid class="mono" :placeholder="lang.toOr('proxyServer.phToken', 'frpc 连接凭证')" />
+              <Button text rounded severity="secondary" :title="lang.toOr('proxyServer.randomToken', '随机生成')" @click="form.token = randomToken()">
                 <i class="fa-solid fa-rotate"></i>
               </Button>
             </div>
-            <span class="hint">frpc 与 frps 需使用相同 Token</span>
+            <span class="hint">{{ lang.toOr('proxyServer.hintToken', 'frpc 与 frps 需使用相同 Token') }}</span>
           </div>
         </div>
 
@@ -669,18 +681,18 @@ function notifyError(summary: string, err: unknown) {
           <div class="footer-actions">
             <Button text severity="secondary" :loading="discoveringForm" @click="discoverForm">
               <i v-if="!discoveringForm" class="fa-solid fa-magnifying-glass"></i>
-              <span class="btn-label">配置发现</span>
+              <span class="btn-label">{{ lang.toOr('proxyServer.discoverConfig', '配置发现') }}</span>
             </Button>
             <Button text severity="secondary" :loading="testingForm" @click="testForm">
               <i v-if="!testingForm" class="fa-solid fa-plug"></i>
-              <span class="btn-label">测试连接</span>
+              <span class="btn-label">{{ lang.toOr('proxyServer.testConnection', '测试连接') }}</span>
             </Button>
           </div>
           <div class="footer-actions">
-            <Button text severity="secondary" label="取消" @click="dialogVisible = false" />
+            <Button text severity="secondary" :label="lang.toOr('proxyServer.cancel', '取消')" @click="dialogVisible = false" />
             <Button :loading="saving" @click="save">
               <i v-if="!saving" class="fa-solid fa-check"></i>
-              <span class="btn-label">保存</span>
+              <span class="btn-label">{{ lang.toOr('proxyServer.save', '保存') }}</span>
             </Button>
           </div>
         </div>
@@ -693,19 +705,19 @@ function notifyError(summary: string, err: unknown) {
       :draggable="false"
       :closable="!installing"
       :close-on-escape="!installing"
-      :header="`安装 frps${installingName ? ' · ' + installingName : ''}`"
+      :header="lang.toOr('proxyServer.installFrps', '安装 frps') + (installingName ? ' · ' + installingName : '')"
       :style="{ width: '720px' }"
     >
       <div class="log-status">
-        <Tag v-if="installing" severity="warn" value="安装中" />
-        <Tag v-else-if="installFailed" severity="danger" value="安装失败" />
-        <Tag v-else severity="success" value="安装完成" />
-        <span class="muted">远程命令输出会实时显示在这里</span>
+        <Tag v-if="installing" severity="warn" :value="lang.toOr('proxyServer.tagInstalling', '安装中')" />
+        <Tag v-else-if="installFailed" severity="danger" :value="lang.toOr('proxyServer.installFailed', '安装失败')" />
+        <Tag v-else severity="success" :value="lang.toOr('proxyServer.installDone', '安装完成')" />
+        <span class="muted">{{ lang.toOr('proxyServer.logHint', '远程命令输出会实时显示在这里') }}</span>
       </div>
-      <pre ref="logRef" class="log-view">{{ installLogs.length ? installLogs.join('\n') : '等待远程输出...' }}</pre>
+      <pre ref="logRef" class="log-view">{{ installLogs.length ? installLogs.join('\n') : lang.toOr('proxyServer.waitingOutput', '等待远程输出...') }}</pre>
 
       <template #footer>
-        <Button text severity="secondary" :disabled="installing" label="关闭" @click="logVisible = false" />
+        <Button text severity="secondary" :disabled="installing" :label="lang.toOr('proxyServer.close', '关闭')" @click="logVisible = false" />
       </template>
     </Dialog>
 
